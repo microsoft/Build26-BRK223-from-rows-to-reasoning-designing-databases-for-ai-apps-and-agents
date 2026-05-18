@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zava · On-Call Console</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <span class="brand-name">Zava</span>
+      <span class="brand-sub">On-Call Console</span>
+    </div>
+    <nav class="nav">
+      <a class="active">Incidents</a>
+      <a>Runbooks</a>
+      <a>Services</a>
+      <a>Postmortems</a>
+    </nav>
+    <div class="user">
+      <span class="status-dot status-online"></span>
+      <span>bward@zava.com</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Active</div>
+        <ul class="incident-list">
+          <li class="active sev-1">
+            <span class="sev-pill">SEV1</span>
+            <div>
+              <div class="inc-title">PayrollAPI · 5xx surge</div>
+              <div class="inc-meta">#5012 · 4 min ago</div>
+            </div>
+          </li>
+          <li class="sev-3">
+            <span class="sev-pill sev-pill-3">SEV3</span>
+            <div>
+              <div class="inc-title">BillingDB · slow queries</div>
+              <div class="inc-meta">#5011 · 22 min ago</div>
+            </div>
+          </li>
+          <li class="sev-3">
+            <span class="sev-pill sev-pill-3">SEV3</span>
+            <div>
+              <div class="inc-title">CDN · cache miss spike</div>
+              <div class="inc-meta">#5010 · 1 h ago</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Recently resolved</div>
+        <ul class="incident-list muted">
+          <li><span class="sev-pill sev-pill-r">RES</span><div><div class="inc-title">AuthGW · token refresh</div><div class="inc-meta">#5008 · 3 h ago</div></div></li>
+          <li><span class="sev-pill sev-pill-r">RES</span><div><div class="inc-title">SearchSvc · index lag</div><div class="inc-meta">#5007 · 5 h ago</div></div></li>
+        </ul>
+      </div>
+    </aside>
+
+    <section class="content">
+      <div class="banner sev-1-banner">
+        <span class="banner-sev">SEV1</span>
+        <span class="banner-text">Active incident · auto-paged on-call</span>
+        <span class="banner-time" id="banner-time">--:--</span>
+      </div>
+
+      <div class="incident-header">
+        <div>
+          <div class="inc-num" id="inc-num">Incident #5012</div>
+          <h1 id="inc-title">PayrollAPI returning HTTP 502 across us-east-2</h1>
+          <div class="chips" id="chips">
+            <span class="chip">tenant: <b>zava</b></span>
+            <span class="chip">service: <b>PayrollAPI</b></span>
+            <span class="chip">region: <b>us-east-2</b></span>
+            <span class="chip chip-warn">errorCode: <b id="chip-err">E1042</b></span>
+            <span class="chip chip-warn">build: <b id="chip-build">2026.04.30-r17</b></span>
+            <span class="chip chip-warn">dependency: <b id="chip-dep">auth-gw.zava.internal</b></span>
+          </div>
+        </div>
+        <div class="status">
+          <span class="status-pill status-active" id="status-pill">ACTIVE</span>
+          <button class="btn btn-secondary">Page secondary</button>
+          <button class="btn btn-primary">Open bridge</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-title">Alert payload</div>
+          <pre class="json" id="alert-json">{
+  "errorCode": "E1042",
+  "p95LatencyMs": 4180,
+  "rate5xx": 0.187,
+  "build": "2026.04.30-r17",
+  "dependency": "auth-gw.zava.internal"
+}</pre>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Engineer note</div>
+          <p class="note" id="engineer-note">PayrollAPI 5xx jumped at 14:02 UTC right after the r17 rollout.
+            Auth gateway calls are timing out. We saw something similar last quarter
+            with a downstream connection-pool exhaustion bug.</p>
+          <div class="meta">— bward · 2 min ago</div>
+        </div>
+
+        <div class="card span-2 ai-card" id="ai-card">
+          <div class="card-title">
+            <span class="ai-dot"></span> AI mitigation
+            <span class="ai-status" id="ai-status">waiting…</span>
+          </div>
+          <div class="ai-empty" id="ai-empty">
+            No mitigation yet. The on-call agent will draft one when it sees similar
+            past incidents and a matching runbook.
+          </div>
+          <div class="ai-body" id="ai-body" hidden>
+            <p class="ai-summary" id="ai-summary"></p>
+            <ol class="steps" id="ai-steps"></ol>
+            <div class="citations" id="ai-citations"></div>
+            <div class="ai-meta" id="ai-meta"></div>
+          </div>
+        </div>
+
+        <div class="card span-2">
+          <div class="card-title">Timeline · last 30 min</div>
+          <ul class="timeline" id="timeline">
+            <li><span class="tl-time">14:02:11</span><span class="tl-svc">PayrollAPI</span><span class="tl-msg tl-err">5xx rate breached threshold (0.18)</span></li>
+            <li><span class="tl-time">14:02:14</span><span class="tl-svc">auth-gw</span><span class="tl-msg tl-err">connection pool exhausted</span></li>
+            <li><span class="tl-time">14:02:22</span><span class="tl-svc">PayrollAPI</span><span class="tl-msg">retry storm detected</span></li>
+            <li><span class="tl-time">14:03:04</span><span class="tl-svc">on-call</span><span class="tl-msg">paged bward@zava.com</span></li>
+            <li><span class="tl-time">14:03:58</span><span class="tl-svc">PayrollAPI</span><span class="tl-msg">incident #5012 created</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <footer class="foot">
+        Powered by <b>Azure SQL</b> · DAB REST · MCP · live data
+      </footer>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

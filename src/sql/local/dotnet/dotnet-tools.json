@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "aspire.cli": {
+      "version": "13.2.4",
+      "commands": [
+        "aspire"
+      ],
+      "rollForward": false
+    },
+    "microsoft.dataapibuilder": {
+      "version": "2.0.0-rc",
+      "commands": [
+        "dab"
+      ],
+      "rollForward": false
+    }
+  }
+}

@@ -1,14 +1,13 @@
 # /src
 
-This folder is for source code and demo code associated with your session.
+Source code and demo assets for **BRK223 — Azure SQL: From Database to Live Site, with AI in the Loop**.
 
-## What goes here
+## Contents
 
-- Sample applications or scripts demonstrated during the session
-- Starter code that attendees can use as a starting point
-- Solution code for completed exercises
+| Path | What it is |
+|---|---|
+| [sql/](sql/README.md) | The complete BRK223 demo — local laptop build (single container hosting SQL + Ollama + Caddy, Blazor WASM page, DAB REST + MCP, custom `live-site-sql` Copilot agent) and the matching Azure cloud lift (Hyperscale + AOAI + APIM + Content Safety + ACA + SWA). Start here. |
 
-## Tips
+## Where to start
 
-- Include a README or comments explaining how to run the code
-- If your session doesn't include source code, feel free to remove this folder
+Open [**sql/README.md**](sql/README.md) and follow the **Quick start — local** section. Cold build is ~12–15 min and produces a working copy of everything shown on stage.

@@ -27,3 +27,20 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# Run logs (e.g. Prep-Cloud-*.ps1 transcripts dropped into src/sql/azure/)
+*.log
+
+# Per-user VS Code workspace files (e.g. Build26-BRK223_bw.code-workspace)
+*.code-workspace
+
+# .NET build outputs
+bin/
+obj/
+[Pp]ublish/
+*.user
+*.suo
+
+# Cloud-deploy intermediates (Prep-Cloud-Hosting.ps1 outputs Blazor publish here)
+src/sql/azure/hosting/blazor-publish/
+

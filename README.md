@@ -39,33 +39,38 @@ Once your content is in the repo, use these three phrases with Copilot to build 
 
 # [Microsoft Build 2026](https://build.microsoft.com)
 
-## 🔥 BRKXXX: SESSION TITLE
+## 🔥 BRK223: Azure SQL — From Database to Live Site, with AI in the Loop
 
 ### Session Description
 
-*Add Session Description*
+An end-to-end sample that grounds an incident-triage AI agent in **Azure SQL**. One container hosts SQL, the embedding model, and the chat model; a Blazor WASM page polls a Data API Builder REST endpoint every two seconds; a custom VS Code agent reaches the same database over MCP to read incidents, run hybrid (vector + JSON + full-text) search across runbooks, execute diagnostic stored procedures, and write a mitigation back into the row — which the page then renders live.
+
+The demo exercises the Azure SQL / SQL Server 2025 AI surface (`vector`, `JSON`, `REGEXP_*`, `AI_GENERATE_EMBEDDINGS`, `CREATE EXTERNAL MODEL`, `sp_invoke_external_rest_endpoint`, DiskANN, JSON indexes, ledger tables) inside a single coherent storyline: incident lands → page lights up → agent triages → mitigation appears.
+
+**The complete demo, scripts, and walkthrough live under [src/sql/](src/sql/README.md).**
 
 ### 🏫 Getting started in a guided session
 
-To get started in a guided lab session:
-- <!-- step 1 -->
-- <!-- step 2 -->
-- <!-- step 3 -->
+To follow along in the room:
+- Watch the live demo of incident #5012 from creation to AI mitigation.
+- Note which Azure SQL feature lights up at each beat (the [src/sql/demo.md](src/sql/demo.md) walkthrough labels them).
+- Grab the QR code on the closing slide to clone this repo and try it at home.
 
 ### 🏠 Getting started in your own environment
 
 If you're following these steps at your own pace:
-- Clone this repository
-- Set up your development environment
-- <!-- step 3 -->
+- Clone this repository.
+- Open [**src/sql/README.md**](src/sql/README.md) and follow the **Quick start — local** section (Windows 11 + Docker Desktop + .NET 10 + PowerShell 7).
+- Cold build is ~12–15 min and lands you on a working local copy of the demo: SQL container, Ollama embedding + chat models, Blazor page, and the `live-site-sql` Copilot agent already wired up.
 
 ### 🧠 Learning Outcomes
 
 By the end of this session, you will be able to:
 
-- <!-- outcome 1 -->
-- <!-- outcome 2 -->
-- <!-- outcome 3 -->
+- Model a hybrid corpus in Azure SQL using `vector`, `JSON`, full-text, and ledger together in one schema.
+- Use `CREATE EXTERNAL MODEL` + `AI_GENERATE_EMBEDDINGS` to embed data and `sp_invoke_external_rest_endpoint` to call a chat model — all from T-SQL.
+- Combine vector (DiskANN), JSON, and full-text predicates in a single hybrid-search stored procedure.
+- Expose a database to a custom AI agent via Data API Builder's MCP endpoint, and ground the agent's behavior with a `.agent.md` + `SKILL.md` pair that VS Code Copilot Chat discovers automatically.
 
 ### 💬 Keep Learning with Copilot
 
@@ -73,15 +78,18 @@ Try these prompts with GitHub Copilot to explore the topics from this session. O
 
 Use these as a starting point — or write your own!
 
-<!-- Prompts will be tailored to this session's content during repo setup. -->
-
-> *Prompts coming soon — check back after the session content is finalized.*
+- *"Show me the syntax for `CREATE EXTERNAL MODEL` in Azure SQL and what `MODEL_TYPE` / `API_FORMAT` values are valid."*
+- *"What's the difference between a DiskANN vector index and a plain kNN vector scan in Azure SQL, and when does the optimizer pick each?"*
+- *"How do I expose a SQL stored procedure as an MCP tool with Data API Builder?"*
+- *"Walk me through grounding an AI agent in Azure SQL using `.agent.md` + `SKILL.md` files that VS Code Copilot Chat auto-discovers."*
 
 ### 💻 Technologies Used
 
-1. <!-- technology 1 -->
-1. <!-- technology 2 -->
-1. <!-- technology 3 -->
+1. Azure SQL Database / SQL Server 2025 (`vector`, `JSON`, `REGEXP_*`, `AI_GENERATE_EMBEDDINGS`, `CREATE EXTERNAL MODEL`, `sp_invoke_external_rest_endpoint`, DiskANN, JSON indexes, ledger tables)
+1. Data API Builder 2.0 (REST + MCP from one config)
+1. .NET 10 + .NET Aspire 13 (Blazor WASM + AppHost orchestration)
+1. Ollama (local: `mxbai-embed-large` embeddings + `phi4-mini` chat) / Azure OpenAI (cloud: `text-embedding-3-small` + `gpt-4o-mini`)
+1. GitHub Copilot Chat custom agent (`.agent.md` + `SKILL.md`) over MCP
 
 ### 📚 Resources and Next Steps
 

@@ -1,0 +1,9 @@
+{
+  "//": "Copy this into .vscode/mcp.json to wire GitHub Copilot Chat (agent mode) to the cloud-hosted BRK223 DAB. The ACA FQDN is filled in by Prep-Cloud-Hosting.ps1 and printed in the summary block at the end of the script.",
+  "servers": {
+    "zava-cloud": {
+      "type": "http",
+      "url": "https://<aca-dab-fqdn>/mcp"
+    }
+  }
+}
