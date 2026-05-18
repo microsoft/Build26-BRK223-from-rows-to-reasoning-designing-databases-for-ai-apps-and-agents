@@ -1,13 +1,15 @@
 # /src
 
-Source code and demo assets for **BRK223 — Azure SQL: From Database to Live Site, with AI in the Loop**.
+Source code and demo assets for **BRK223 — From rows to reasoning: Designing databases for AI apps and agents**.
 
-## Contents
+## Demos
 
-| Path | What it is |
-|---|---|
-| [sql/](sql/README.md) | The complete BRK223 demo — local laptop build (single container hosting SQL + Ollama + Caddy, Blazor WASM page, DAB REST + MCP, custom `live-site-sql` Copilot agent) and the matching Azure cloud lift (Hyperscale + AOAI + APIM + Content Safety + ACA + SWA). Start here. |
+| Path | What it is | Status |
+|---|---|---|
+| [sql/](sql/README.md) | **Azure SQL — From Database to Live Site, with AI in the Loop.** Local single-container build (SQL + Ollama + Caddy) + Blazor WASM page + Data API Builder REST/MCP + custom `live-site-sql` Copilot agent. Also includes the matching Azure cloud lift (Hyperscale + AOAI + APIM + Content Safety + ACA + SWA). | ✅ Available |
+| `cosmosdb/` | Cosmos DB demo. | 🚧 Coming soon |
+| `horizondb/` | Azure HorizonDB (PostgreSQL) demo. | 🚧 Coming soon |
 
 ## Where to start
 
-Open [**sql/README.md**](sql/README.md) and follow the **Quick start — local** section. Cold build is ~12–15 min and produces a working copy of everything shown on stage.
+Open [**sql/README.md**](sql/README.md) and follow the **Quick start — local** section. Cold build is ~12–15 min.

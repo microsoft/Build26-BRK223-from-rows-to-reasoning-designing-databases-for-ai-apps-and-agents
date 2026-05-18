@@ -39,38 +39,44 @@ Once your content is in the repo, use these three phrases with Copilot to build 
 
 # [Microsoft Build 2026](https://build.microsoft.com)
 
-## 🔥 BRK223: Azure SQL — From Database to Live Site, with AI in the Loop
+## 🔥 BRK223: From rows to reasoning — Designing databases for AI apps and agents
 
 ### Session Description
 
-An end-to-end sample that grounds an incident-triage AI agent in **Azure SQL**. One container hosts SQL, the embedding model, and the chat model; a Blazor WASM page polls a Data API Builder REST endpoint every two seconds; a custom VS Code agent reaches the same database over MCP to read incidents, run hybrid (vector + JSON + full-text) search across runbooks, execute diagnostic stored procedures, and write a mitigation back into the row — which the page then renders live.
+AI applications and agents require data platforms designed for reasoning, not just transactions. Traditional architectures force developers to stitch data systems together, adding latency and complexity. In this demo-rich session, we'll show the latest innovations in **SQL Database** and **Cosmos DB**, then build an app on **Azure HorizonDB**, Azure's new cloud-native PostgreSQL service, to show how AI apps built directly in the database simplify design and enable reasoning over operational data.
 
-The demo exercises the Azure SQL / SQL Server 2025 AI surface (`vector`, `JSON`, `REGEXP_*`, `AI_GENERATE_EMBEDDINGS`, `CREATE EXTERNAL MODEL`, `sp_invoke_external_rest_endpoint`, DiskANN, JSON indexes, ledger tables) inside a single coherent storyline: incident lands → page lights up → agent triages → mitigation appears.
+### 🎬 Demos in this repo
 
-**The complete demo, scripts, and walkthrough live under [src/sql/](src/sql/README.md).**
+Each demo is self-contained under `src/`. Open the demo's README for prerequisites, a quick-start, and a walkthrough.
+
+| Demo | What it shows | Status |
+|---|---|---|
+| **[Azure SQL — From Database to Live Site, with AI in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
+| **Cosmos DB** | *Coming soon.* | 🚧 In progress |
+| **Azure HorizonDB (PostgreSQL)** | *Coming soon.* | 🚧 In progress |
 
 ### 🏫 Getting started in a guided session
 
 To follow along in the room:
-- Watch the live demo of incident #5012 from creation to AI mitigation.
-- Note which Azure SQL feature lights up at each beat (the [src/sql/demo.md](src/sql/demo.md) walkthrough labels them).
-- Grab the QR code on the closing slide to clone this repo and try it at home.
+- Watch each demo land its database feature against the same overarching story (operational data → grounding → agent reasoning).
+- Note which data-platform innovation each demo highlights — vector + JSON in SQL, the Cosmos DB story, AI-in-the-database on HorizonDB.
+- Grab the QR code on the closing slide to clone this repo and try each demo at home.
 
 ### 🏠 Getting started in your own environment
 
-If you're following these steps at your own pace:
-- Clone this repository.
-- Open [**src/sql/README.md**](src/sql/README.md) and follow the **Quick start — local** section (Windows 11 + Docker Desktop + .NET 10 + PowerShell 7).
-- Cold build is ~12–15 min and lands you on a working local copy of the demo: SQL container, Ollama embedding + chat models, Blazor page, and the `live-site-sql` Copilot agent already wired up.
+If you're following at your own pace, each demo has its own quick-start:
+- **SQL:** [src/sql/README.md](src/sql/README.md) — Windows 11 + Docker Desktop + .NET 10 + PowerShell 7. Cold build ~12–15 min.
+- **Cosmos DB:** coming soon.
+- **HorizonDB:** coming soon.
 
 ### 🧠 Learning Outcomes
 
 By the end of this session, you will be able to:
 
-- Model a hybrid corpus in Azure SQL using `vector`, `JSON`, full-text, and ledger together in one schema.
-- Use `CREATE EXTERNAL MODEL` + `AI_GENERATE_EMBEDDINGS` to embed data and `sp_invoke_external_rest_endpoint` to call a chat model — all from T-SQL.
-- Combine vector (DiskANN), JSON, and full-text predicates in a single hybrid-search stored procedure.
-- Expose a database to a custom AI agent via Data API Builder's MCP endpoint, and ground the agent's behavior with a `.agent.md` + `SKILL.md` pair that VS Code Copilot Chat discovers automatically.
+- Recognize when an AI app's bottleneck is the database design, not the model.
+- Compare how SQL Database, Cosmos DB, and Azure HorizonDB each express vectors, JSON, and AI-in-the-database — and pick the right one per workload.
+- Use `CREATE EXTERNAL MODEL` + `AI_GENERATE_EMBEDDINGS` (SQL) and equivalent surfaces in Cosmos DB and HorizonDB to embed and reason over operational data without leaving the database.
+- Ground a Copilot agent in a live database via MCP, with grounding files (`.agent.md` + `SKILL.md`) that VS Code Copilot Chat discovers automatically.
 
 ### 💬 Keep Learning with Copilot
 
@@ -78,18 +84,19 @@ Try these prompts with GitHub Copilot to explore the topics from this session. O
 
 Use these as a starting point — or write your own!
 
+- *"Compare how Azure SQL Database, Azure Cosmos DB, and Azure HorizonDB each store and query vector embeddings. When would I pick each?"*
 - *"Show me the syntax for `CREATE EXTERNAL MODEL` in Azure SQL and what `MODEL_TYPE` / `API_FORMAT` values are valid."*
-- *"What's the difference between a DiskANN vector index and a plain kNN vector scan in Azure SQL, and when does the optimizer pick each?"*
-- *"How do I expose a SQL stored procedure as an MCP tool with Data API Builder?"*
-- *"Walk me through grounding an AI agent in Azure SQL using `.agent.md` + `SKILL.md` files that VS Code Copilot Chat auto-discovers."*
+- *"How do I expose a database to an AI agent via MCP using Data API Builder?"*
+- *"What does 'AI built directly in the database' mean for an agent that needs to reason over operational data with low latency?"*
 
 ### 💻 Technologies Used
 
 1. Azure SQL Database / SQL Server 2025 (`vector`, `JSON`, `REGEXP_*`, `AI_GENERATE_EMBEDDINGS`, `CREATE EXTERNAL MODEL`, `sp_invoke_external_rest_endpoint`, DiskANN, JSON indexes, ledger tables)
+1. Azure Cosmos DB
+1. Azure HorizonDB (cloud-native PostgreSQL with AI in the database)
 1. Data API Builder 2.0 (REST + MCP from one config)
-1. .NET 10 + .NET Aspire 13 (Blazor WASM + AppHost orchestration)
-1. Ollama (local: `mxbai-embed-large` embeddings + `phi4-mini` chat) / Azure OpenAI (cloud: `text-embedding-3-small` + `gpt-4o-mini`)
-1. GitHub Copilot Chat custom agent (`.agent.md` + `SKILL.md`) over MCP
+1. .NET 10 + .NET Aspire 13 (Blazor WASM + AppHost orchestration in the SQL demo)
+1. GitHub Copilot Chat custom agents (`.agent.md` + `SKILL.md`) over MCP
 
 ### 📚 Resources and Next Steps
 
