@@ -3,6 +3,10 @@
     "microsoft.docs.mcp": {
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "zavalivesite-sql": {
+      "type": "http",
+      "url": "http://localhost:8765/mcp"
     }
   }
 }

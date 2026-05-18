@@ -1,0 +1,273 @@
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v2.0.0-rc/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('MSSQL_CONNECTION_STRING')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": true
+    },
+    "graphql": {
+      "enabled": false,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp",
+      "dml-tools": {
+        "describe-entities": true,
+        "create-record": false,
+        "read-records": true,
+        "update-record": false,
+        "delete-record": false,
+        "execute-entity": true,
+        "aggregate-records": false
+      }
+    },
+    "host": {
+      "cors": {
+        "origins": ["*"],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "Simulator"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "Incident": {
+      "source": {
+        "object": "dbo.Incident",
+        "type": "table",
+        "key-fields": ["IncidentId"]
+      },
+      "rest": {
+        "enabled": true,
+        "path": "Incident"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": ["Embedding"]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Active live-site incidents. AlertPayload is the Azure Monitor envelope; EngineerNote is the on-call's first observation; Tags is regex-extracted error metadata; ProposedMitigation is filled in by usp_GenerateMitigation."
+    },
+    "IncidentArchive": {
+      "source": {
+        "object": "dbo.IncidentArchive",
+        "type": "table",
+        "key-fields": ["IncidentId"]
+      },
+      "rest": {
+        "enabled": true,
+        "path": "IncidentArchive"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": ["Embedding"]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Resolved historical incidents with RootCause and Mitigation. The corpus that hybrid search retrieves from."
+    },
+    "Runbook": {
+      "source": {
+        "object": "dbo.Runbook",
+        "type": "table",
+        "key-fields": ["RunbookId"]
+      },
+      "rest": {
+        "enabled": true,
+        "path": "Runbook"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": ["Embedding"]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Service runbooks (e.g. Payroll.7) keyed by RunbookId. Retrieved alongside prior incidents during hybrid search."
+    },
+    "HybridSearch": {
+      "source": {
+        "object": "dbo.usp_HybridSearch",
+        "type": "stored-procedure",
+        "parameters": {
+          "TenantId": "zava",
+          "Question": "",
+          "ErrorCode": null,
+          "TopK": 5
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "HybridSearch",
+        "methods": ["GET", "POST"]
+      },
+      "mcp": {
+        "custom-tool": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["execute"]
+        }
+      ],
+      "description": "Hybrid (JSON + vector) RAG search over IncidentArchive and Runbook. Pass TenantId, the natural-language Question, and optionally an ErrorCode (e.g. '1205'). Returns a single result set; each row has a 'source' column ('incident' or 'runbook'), id, title, body, distance, and extra (JSON tags for incidents, NULL for runbooks). Rows are ordered by cosine distance — lower = more relevant."
+    },
+    "LogTimeline": {
+      "source": {
+        "object": "dbo.usp_LogTimeline",
+        "type": "stored-procedure",
+        "parameters": {
+          "IncidentId": 5012
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "LogTimeline",
+        "methods": ["GET", "POST"]
+      },
+      "mcp": {
+        "custom-tool": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["execute"]
+        }
+      ],
+      "description": "Returns the time-ordered log/event timeline for the given IncidentId. Use this when an agent needs raw timeline context for an active incident."
+    },
+    "GenerateMitigation": {
+      "source": {
+        "object": "dbo.usp_GenerateMitigation",
+        "type": "stored-procedure",
+        "parameters": {
+          "IncidentId": 5012,
+          "DiagnosticsJson": null,
+          "WhatIf": false
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "GenerateMitigation",
+        "methods": ["POST"]
+      },
+      "mcp": {
+        "custom-tool": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["execute"]
+        }
+      ],
+      "description": "Generates a proposed mitigation for the given IncidentId by running hybrid RAG search and calling the local chat-completion model. Pass DiagnosticsJson with the aggregated dx_* findings the agent collected before calling this tool — the model treats them as ground truth and reorders the runbook plan accordingly. Set WhatIf=true to build the prompt and call the model without persisting the result. Returns IncidentId, Status, ProposedMitigation."
+    },
+    "DxIndexExists": {
+      "source": {
+        "object": "dbo.usp_DxIndexExists",
+        "type": "stored-procedure",
+        "parameters": {
+          "SchemaName": "dbo",
+          "TableName": "PayrollBatch",
+          "IndexName": "ix_payroll_runDate"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "DxIndexExists",
+        "methods": ["GET", "POST"]
+      },
+      "mcp": {
+        "custom-tool": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["execute"]
+        }
+      ],
+      "description": "Diagnostic dx_index_exists. Returns one row with finding ('index_present' | 'index_missing' | 'table_not_found') plus key_columns, is_unique, index_type. Call this BEFORE generate_mitigation when a runbook recommends creating a specific index, to check whether it has already been applied."
+    },
+    "DxResourcePressure": {
+      "source": {
+        "object": "dbo.usp_DxResourcePressure",
+        "type": "stored-procedure",
+        "parameters": {
+          "WindowMinutes": 5
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "DxResourcePressure",
+        "methods": ["GET", "POST"]
+      },
+      "mcp": {
+        "custom-tool": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["execute"]
+        }
+      ],
+      "description": "Diagnostic dx_resource_pressure. Returns one row summarizing the last WindowMinutes of sys.dm_db_resource_stats. finding is 'pressure_high' (>80% CPU or log write), 'pressure_moderate' (50-80%), or 'pressure_normal' (<50%). Call this BEFORE generate_mitigation to gate any online DDL or large batched UPDATEs in the runbook plan."
+    },
+    "DxDeadlockRecent": {
+      "source": {
+        "object": "dbo.usp_DxDeadlockRecent",
+        "type": "stored-procedure",
+        "parameters": {
+          "TopN": 5
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "DxDeadlockRecent",
+        "methods": ["GET", "POST"]
+      },
+      "mcp": {
+        "custom-tool": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["execute"]
+        }
+      ],
+      "description": "Diagnostic dx_deadlock_recent. Returns the most recent deadlock-shaped messages from the dbo.AppLog ledger. finding is 'deadlock_present' or 'no_deadlock_history'. Call this when the symptom is a deadlock (Msg 1205) or LCK_M_X wait, BEFORE generate_mitigation, to confirm the symptom is current."
+    }
+  }
+}

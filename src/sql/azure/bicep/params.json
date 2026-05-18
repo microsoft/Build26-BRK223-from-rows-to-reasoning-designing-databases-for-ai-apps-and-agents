@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json",
+  "parameters": {
+    "sqlAadAdminObjectId": {
+      "value": "6da7c2dd-8e2e-469f-a216-c384312e2a2d"
+    },
+    "sqlAadAdminLogin": {
+      "value": "bobward@microsoft.com"
+    }
+  },
+  "contentVersion": "1.0.0.0"
+}

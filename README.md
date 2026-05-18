@@ -39,33 +39,44 @@ Once your content is in the repo, use these three phrases with Copilot to build 
 
 # [Microsoft Build 2026](https://build.microsoft.com)
 
-## 🔥 BRKXXX: SESSION TITLE
+## 🔥 BRK223: From rows to reasoning — Designing databases for AI apps and agents
 
 ### Session Description
 
-*Add Session Description*
+AI applications and agents require data platforms designed for reasoning, not just transactions. Traditional architectures force developers to stitch data systems together, adding latency and complexity. In this demo-rich session, we'll show the latest innovations in **SQL Database** and **Cosmos DB**, then build an app on **Azure HorizonDB**, Azure's new cloud-native PostgreSQL service, to show how AI apps built directly in the database simplify design and enable reasoning over operational data.
+
+### 🎬 Demos in this repo
+
+Each demo is self-contained under `src/`. Open the demo's README for prerequisites, a quick-start, and a walkthrough.
+
+| Demo | What it shows | Status |
+|---|---|---|
+| **[Azure SQL — From Database to Live Site, with AI in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
+| **Cosmos DB** | *Coming soon.* | 🚧 In progress |
+| **Azure HorizonDB (PostgreSQL)** | *Coming soon.* | 🚧 In progress |
 
 ### 🏫 Getting started in a guided session
 
-To get started in a guided lab session:
-- <!-- step 1 -->
-- <!-- step 2 -->
-- <!-- step 3 -->
+To follow along in the room:
+- Watch each demo land its database feature against the same overarching story (operational data → grounding → agent reasoning).
+- Note which data-platform innovation each demo highlights — vector + JSON in SQL, the Cosmos DB story, AI-in-the-database on HorizonDB.
+- Grab the QR code on the closing slide to clone this repo and try each demo at home.
 
 ### 🏠 Getting started in your own environment
 
-If you're following these steps at your own pace:
-- Clone this repository
-- Set up your development environment
-- <!-- step 3 -->
+If you're following at your own pace, each demo has its own quick-start:
+- **SQL:** [src/sql/README.md](src/sql/README.md) — Windows 11 + Docker Desktop + .NET 10 + PowerShell 7. Cold build ~12–15 min.
+- **Cosmos DB:** coming soon.
+- **HorizonDB:** coming soon.
 
 ### 🧠 Learning Outcomes
 
 By the end of this session, you will be able to:
 
-- <!-- outcome 1 -->
-- <!-- outcome 2 -->
-- <!-- outcome 3 -->
+- Recognize when an AI app's bottleneck is the database design, not the model.
+- Compare how SQL Database, Cosmos DB, and Azure HorizonDB each express vectors, JSON, and AI-in-the-database — and pick the right one per workload.
+- Use `CREATE EXTERNAL MODEL` + `AI_GENERATE_EMBEDDINGS` (SQL) and equivalent surfaces in Cosmos DB and HorizonDB to embed and reason over operational data without leaving the database.
+- Ground a Copilot agent in a live database via MCP, with grounding files (`.agent.md` + `SKILL.md`) that VS Code Copilot Chat discovers automatically.
 
 ### 💬 Keep Learning with Copilot
 
@@ -73,15 +84,19 @@ Try these prompts with GitHub Copilot to explore the topics from this session. O
 
 Use these as a starting point — or write your own!
 
-<!-- Prompts will be tailored to this session's content during repo setup. -->
-
-> *Prompts coming soon — check back after the session content is finalized.*
+- *"Compare how Azure SQL Database, Azure Cosmos DB, and Azure HorizonDB each store and query vector embeddings. When would I pick each?"*
+- *"Show me the syntax for `CREATE EXTERNAL MODEL` in Azure SQL and what `MODEL_TYPE` / `API_FORMAT` values are valid."*
+- *"How do I expose a database to an AI agent via MCP using Data API Builder?"*
+- *"What does 'AI built directly in the database' mean for an agent that needs to reason over operational data with low latency?"*
 
 ### 💻 Technologies Used
 
-1. <!-- technology 1 -->
-1. <!-- technology 2 -->
-1. <!-- technology 3 -->
+1. Azure SQL Database / SQL Server 2025 (`vector`, `JSON`, `REGEXP_*`, `AI_GENERATE_EMBEDDINGS`, `CREATE EXTERNAL MODEL`, `sp_invoke_external_rest_endpoint`, DiskANN, JSON indexes, ledger tables)
+1. Azure Cosmos DB
+1. Azure HorizonDB (cloud-native PostgreSQL with AI in the database)
+1. Data API Builder 2.0 (REST + MCP from one config)
+1. .NET 10 + .NET Aspire 13 (Blazor WASM + AppHost orchestration in the SQL demo)
+1. GitHub Copilot Chat custom agents (`.agent.md` + `SKILL.md`) over MCP
 
 ### 📚 Resources and Next Steps
 

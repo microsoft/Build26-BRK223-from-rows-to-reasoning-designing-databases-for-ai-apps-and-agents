@@ -1,0 +1,354 @@
+@page "/"
+@page "/incident"
+@page "/incident/{IncidentId:int}"
+@using System.Net.Http.Json
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@inject NavigationManager Nav
+@inject DabEndpoints DabUrls
+@implements IDisposable
+
+<PageTitle>Zava Live Site Incident Systems</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="0" Style="min-height:100vh;background:linear-gradient(135deg,#f5f7ff 0%,#fff7f2 50%,#f2fbf6 100%);">
+
+    @* === SEV1 banner — only when an incident is loaded === *@
+    @if (incident is not null)
+    {
+        <div style="background:linear-gradient(90deg,#b3261e 0%,#e94e1b 100%);color:#fff;padding:10px 24px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;box-shadow:0 2px 8px rgba(179,38,30,0.25);">
+            SEV1 &middot; Active incident
+        </div>
+    }
+
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="16" Style="padding:24px;max-width:960px;width:100%;align-self:center;">
+
+        @* === Header row === *@
+        <div style="display:flex;align-items:flex-start;gap:12px;width:100%;">
+            <FluentLabel Typo="Typography.H3" Style="margin:0;flex:1 1 auto;min-width:0;background:linear-gradient(90deg,#0a4d8a 0%,#7b1fa2 60%,#c2185b 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+                @(incident is null ? "Zava Live Site Incident Systems" : $"Incident #{(IncidentId == 0 ? 5012 : IncidentId)} — {HeaderSubtitle()}")
+            </FluentLabel>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                @if (lastRefreshed is not null)
+                {
+                    <FluentLabel Typo="Typography.Body" Style="color:#666;font-size:0.8rem;white-space:nowrap;">
+                        Last refreshed @lastRefreshed.Value.ToLocalTime().ToString("HH:mm:ss")
+                    </FluentLabel>
+                }
+                <FluentButton Appearance="Appearance.Accent" OnClick="LoadAsync" Disabled="@loading">
+                    Refresh
+                </FluentButton>
+                @* === Logged-in engineer identity === *@
+                <div style="display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0e0e0;border-radius:20px;padding:4px 12px 4px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0a4d8a 0%,#7b1fa2 100%);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;letter-spacing:0.05em;">BW</div>
+                    <div style="display:flex;flex-direction:column;line-height:1.1;">
+                        <span style="font-size:0.85rem;font-weight:600;color:#222;">Bob Ward</span>
+                        <span style="font-size:0.7rem;color:#666;">On-call engineer</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (error is not null)
+        {
+            <FluentMessageBar Intent="MessageIntent.Error" Title="Error">@error</FluentMessageBar>
+        }
+
+        @* === Identity row (always visible — placeholders before Beat 1) === *@
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="14" Style="padding:20px;">
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10" VerticalAlignment="VerticalAlignment.Center">
+                    @if (incident?.Severity is { Length: > 0 } sev)
+                    {
+                        <FluentBadge Style="background-color:#b3261e;color:#fff;text-transform:uppercase;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:0.04em;">
+                            @sev
+                        </FluentBadge>
+                    }
+                    else
+                    {
+                        <FluentBadge Appearance="Appearance.Neutral" Style="text-transform:uppercase;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:0.04em;">—</FluentBadge>
+                    }
+                    <FluentLabel Typo="Typography.H4" Style="margin:0;">
+                        @(incident?.Service ?? "—") &mdash; @(incident?.TenantId ?? "—")
+                    </FluentLabel>
+                    <FluentBadge Appearance="Appearance.Neutral">@(incident?.Status ?? "—")</FluentBadge>
+                </FluentStack>
+
+                <FluentDivider />
+
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="32">
+                    <div>
+                        <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Tenant</FluentLabel>
+                        <FluentLabel Typo="Typography.Subject">@(incident?.TenantId ?? "—")</FluentLabel>
+                    </div>
+                    <div>
+                        <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Service</FluentLabel>
+                        <FluentLabel Typo="Typography.Subject">@(incident?.Service ?? "—")</FluentLabel>
+                    </div>
+                    <div>
+                        <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Region</FluentLabel>
+                        <FluentLabel Typo="Typography.Subject">@(incident?.Region ?? "—")</FluentLabel>
+                    </div>
+                </FluentStack>
+            </FluentStack>
+        </FluentCard>
+
+        @* === AlertPayload card (Beat 1: this populates from the json column) === *@
+        @* moved to bottom *@
+
+        @* === Tags chips row (Beat 1: regex-derived chips light up) === *@
+        @* moved to bottom *@
+
+        @* === EngineerNote card (Beat 1: populates with the war-room prose) === *@
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="padding:20px;">
+                <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Engineer note</FluentLabel>
+                @if (!string.IsNullOrWhiteSpace(incident?.EngineerNote))
+                {
+                    <FluentLabel Typo="Typography.Body" Style="line-height:1.55;">@incident!.EngineerNote</FluentLabel>
+                }
+                else
+                {
+                    <FluentLabel Typo="Typography.Body" Color="Color.Disabled">
+                        (no engineer note yet)
+                    </FluentLabel>
+                }
+            </FluentStack>
+        </FluentCard>
+
+        @* === AI mitigation panel (Beat 4: agent fills this in) === *@
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="10" Style="padding:20px;">
+                <FluentLabel Typo="Typography.H6" Style="margin:0;">Proposed mitigation</FluentLabel>
+                @if (incident?.ProposedMitigation is null
+                  || incident.ProposedMitigation.Value.ValueKind == JsonValueKind.Null
+                  || incident.ProposedMitigation.Value.ValueKind == JsonValueKind.Undefined)
+                {
+                    <FluentLabel Typo="Typography.Body" Color="Color.Disabled">
+                        No mitigation yet. The on-call agent will draft one when it sees similar past incidents and a matching runbook.
+                    </FluentLabel>
+                }
+                else
+                {
+                    var m = incident.ProposedMitigation.Value;
+                    if (m.TryGetProperty("summary", out var sum))
+                    {
+                        <FluentLabel Typo="Typography.Body" Style="font-size:1.05rem;line-height:1.5;">@sum.GetString()</FluentLabel>
+                    }
+                    if (m.TryGetProperty("rollout_plan", out var plan) && plan.ValueKind == JsonValueKind.Array)
+                    {
+                        <FluentDivider />
+                        <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Rollout plan</FluentLabel>
+                        <ol style="margin:0;padding-left:20px;">
+                            @foreach (var step in plan.EnumerateArray())
+                            {
+                                <li style="margin-bottom:10px;">
+                                    <strong>@(step.TryGetProperty("action", out var a) ? a.GetString() : "")</strong>
+                                    @if (step.TryGetProperty("rationale", out var r))
+                                    {
+                                        <div style="font-size:0.9rem;">@r.GetString()</div>
+                                    }
+                                    @if (step.TryGetProperty("verify", out var v))
+                                    {
+                                        <div style="font-size:1rem;color:#222;margin-top:4px;"><strong>Verify:</strong> @v.GetString()</div>
+                                    }
+                                </li>
+                            }
+                        </ol>
+                    }
+                    if (m.TryGetProperty("blast_radius", out var br) && br.ValueKind == JsonValueKind.Object)
+                    {
+                        <FluentDivider />
+                        <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Blast radius</FluentLabel>
+                        <FluentLabel Typo="Typography.Body">@(br.TryGetProperty("summary", out var brs) ? brs.GetString() : br.GetRawText())</FluentLabel>
+                    }
+                    if (m.TryGetProperty("confidence", out var conf) && conf.ValueKind == JsonValueKind.Object)
+                    {
+                        <FluentDivider />
+                        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Confidence</FluentLabel>
+                            <FluentBadge Appearance="Appearance.Accent">@(conf.TryGetProperty("overall", out var ov) ? ov.GetString() : "")</FluentBadge>
+                            @if (conf.TryGetProperty("notes", out var n))
+                            {
+                                <FluentLabel Typo="Typography.Body">@n.GetString()</FluentLabel>
+                            }
+                        </FluentStack>
+                    }
+                }
+            </FluentStack>
+        </FluentCard>
+
+        @* === AlertPayload card (moved to bottom) === *@
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="padding:20px;">
+                <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Alert payload</FluentLabel>
+                @if (incident?.AlertPayload is { ValueKind: JsonValueKind.Object } payload)
+                {
+                    <pre style="background:#f4f4f4;border:1px solid #e0e0e0;border-radius:4px;padding:12px;margin:0;font-size:0.85rem;overflow:auto;">@FormatJson(payload)</pre>
+                }
+                else
+                {
+                    <FluentLabel Typo="Typography.Body" Color="Color.Disabled">
+                        (no payload yet — populated when the incident is created)
+                    </FluentLabel>
+                }
+            </FluentStack>
+        </FluentCard>
+
+        @* === Tags chips row (moved to bottom) === *@
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Style="padding:20px;">
+                <FluentLabel Typo="Typography.Body" Style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#000;font-weight:600;">Tags</FluentLabel>
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10" VerticalAlignment="VerticalAlignment.Center">
+                    @RenderChip("errorCode",  TagValue("errorCode"))
+                    @RenderChip("build",      TagValue("build"))
+                    @RenderChip("waitType",   TagValue("waitType"))
+                </FluentStack>
+            </FluentStack>
+        </FluentCard>
+
+        @* === Footer === *@
+        <FluentLabel Typo="Typography.Body" Style="color:#666;font-size:0.85rem;text-align:center;padding-top:12px;">
+            @FooterText()
+        </FluentLabel>
+    </FluentStack>
+</FluentStack>
+
+@code {
+    [Parameter] public int IncidentId { get; set; } = 5012;
+
+    private IncidentRow? incident;
+    private bool loading = true;
+    private string? error;
+    private DateTime? lastRefreshed;
+    private System.Threading.Timer? pollTimer;
+    private HttpClient? http;
+    private string dabMode = "local";   // "local" or "cloud" — driven by ?dab= query string
+
+    protected override void OnInitialized()
+    {
+        // Parse ?dab=local|cloud once on initialization. Beat 5 flips this.
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var q = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var modeRaw = q["dab"];
+        if (!string.IsNullOrEmpty(modeRaw))
+        {
+            var mode = modeRaw.ToLowerInvariant();
+            if (mode == "cloud" || mode == "local") { dabMode = mode; }
+        }
+        var baseUrl = dabMode == "cloud" ? DabUrls.Cloud : DabUrls.Local;
+        http = new HttpClient { BaseAddress = new Uri(baseUrl) };
+
+        // Poll every 2 seconds — Beat 4(c) wants the AI panel to light up
+        // automatically when GenerateMitigation finishes; alt-tab from Copilot
+        // Chat back to the browser and the row is already there.
+        pollTimer = new System.Threading.Timer(_ => InvokeAsync(LoadAsync), null,
+            TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (http is null) { return; }
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var id = IncidentId == 0 ? 5012 : IncidentId;
+            var resp = await http.GetFromJsonAsync<DabEnvelope<IncidentRow>>(
+                $"api/Incident/IncidentId/{id}");
+            incident = resp?.Value?.FirstOrDefault();
+            error = null;
+        }
+        catch (Exception ex)
+        {
+            // Don't surface transient polling errors as blocking errors —
+            // demo Beat 0 is supposed to render the empty frame gracefully
+            // even before the row exists. Only show the message bar if
+            // the user-initiated refresh failed and we have nothing yet.
+            if (incident is null) { error = ex.Message; }
+        }
+        finally
+        {
+            loading = false;
+            lastRefreshed = DateTime.UtcNow;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose() => pollTimer?.Dispose();
+
+    private string HeaderSubtitle()
+    {
+        // Prefer AlertPayload.description when present; fall back to the
+        // demo's framing line so the page reads correctly pre-Beat-1.
+        if (incident?.AlertPayload is { ValueKind: JsonValueKind.Object } p
+            && p.TryGetProperty("description", out var d)
+            && d.ValueKind == JsonValueKind.String)
+        {
+            var s = d.GetString();
+            if (!string.IsNullOrWhiteSpace(s)) { return s!; }
+        }
+        return incident?.Service is { Length: > 0 } svc ? svc : "";
+    }
+
+    private string FooterText() => dabMode == "cloud"
+        ? "Powered by Azure SQL Hyperscale + Azure OpenAI · DAB REST · MCP · live data."
+        : "Powered by Azure SQL · DAB REST · MCP · live data.";
+
+    private string? TagValue(string key)
+    {
+        if (incident?.Tags is { ValueKind: JsonValueKind.Object } t
+            && t.TryGetProperty(key, out var v))
+        {
+            return v.ValueKind switch
+            {
+                JsonValueKind.String => v.GetString(),
+                JsonValueKind.Number => v.GetRawText(),
+                _                    => null
+            };
+        }
+        return null;
+    }
+
+    private RenderFragment RenderChip(string key, string? value) => __builder =>
+    {
+        var hasValue = !string.IsNullOrWhiteSpace(value);
+        var bg       = hasValue ? "#e8f0fe" : "#f0f0f0";
+        var fg       = hasValue ? "#1a3a8a" : "#888";
+        <span style="display:inline-flex;align-items:center;gap:6px;background:@bg;color:@fg;padding:4px 10px;border-radius:14px;font-size:0.85rem;border:1px solid @(hasValue ? "#c4d6f7" : "#e0e0e0");">
+            <strong>@key:</strong> @(hasValue ? value : "—")
+        </span>
+    };
+
+    private static string FormatJson(JsonElement e)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(e, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch { return e.GetRawText(); }
+    }
+
+    private sealed class DabEnvelope<T>
+    {
+        [JsonPropertyName("value")] public List<T>? Value { get; set; }
+    }
+
+    private sealed class IncidentRow
+    {
+        [JsonPropertyName("IncidentId")]         public int IncidentId { get; set; }
+        [JsonPropertyName("TenantId")]           public string? TenantId { get; set; }
+        [JsonPropertyName("Service")]            public string? Service { get; set; }
+        [JsonPropertyName("Region")]             public string? Region { get; set; }
+        [JsonPropertyName("Severity")]           public string? Severity { get; set; }
+        [JsonPropertyName("Status")]             public string? Status { get; set; }
+        [JsonPropertyName("EngineerNote")]       public string? EngineerNote { get; set; }
+        [JsonPropertyName("AlertPayload")]       public JsonElement? AlertPayload { get; set; }
+        [JsonPropertyName("Tags")]               public JsonElement? Tags { get; set; }
+        [JsonPropertyName("ProposedMitigation")] public JsonElement? ProposedMitigation { get; set; }
+    }
+}

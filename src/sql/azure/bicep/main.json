@@ -1,0 +1,814 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "7772596056652462969"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region. Default: resource group region."
+      }
+    },
+    "nameSuffix": {
+      "type": "string",
+      "defaultValue": "[take(uniqueString(resourceGroup().id), 6)]",
+      "metadata": {
+        "description": "Short suffix for globally-unique resource names. Auto from RG id."
+      }
+    },
+    "sqlAadAdminObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "AAD principal that will be the SQL server AAD admin (object id)."
+      }
+    },
+    "sqlAadAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "AAD principal login (UPN) for display."
+      }
+    },
+    "chatDeploymentName": {
+      "type": "string",
+      "defaultValue": "gpt-5-4-mini",
+      "metadata": {
+        "description": "AOAI chat deployment name. Cannot contain dots."
+      }
+    },
+    "chatModelName": {
+      "type": "string",
+      "defaultValue": "gpt-5.4-mini",
+      "metadata": {
+        "description": "AOAI chat model name."
+      }
+    },
+    "chatModelVersion": {
+      "type": "string",
+      "defaultValue": "2026-03-17",
+      "metadata": {
+        "description": "AOAI chat model version."
+      }
+    },
+    "embedDeploymentName": {
+      "type": "string",
+      "defaultValue": "text-embedding-3-small",
+      "metadata": {
+        "description": "AOAI embeddings deployment name."
+      }
+    },
+    "embedModelName": {
+      "type": "string",
+      "defaultValue": "text-embedding-3-small",
+      "metadata": {
+        "description": "AOAI embeddings model name."
+      }
+    },
+    "embedModelVersion": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+        "description": "AOAI embeddings model version."
+      }
+    },
+    "chatCapacity": {
+      "type": "int",
+      "defaultValue": 50,
+      "metadata": {
+        "description": "Chat TPM capacity in 1000-token units."
+      }
+    },
+    "embedCapacity": {
+      "type": "int",
+      "defaultValue": 30,
+      "metadata": {
+        "description": "Embeddings TPM capacity in 1000-token units."
+      }
+    },
+    "sqlServerName": {
+      "type": "string",
+      "defaultValue": "zavasqlserver",
+      "metadata": {
+        "description": "SQL logical server name. Default: zavasqlserver. Must be globally unique."
+      }
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "defaultValue": "zavalivesitedb",
+      "metadata": {
+        "description": "SQL database name. Default: zavalivesitedb."
+      }
+    },
+    "sqlSkuName": {
+      "type": "string",
+      "defaultValue": "HS_PRMS_32",
+      "metadata": {
+        "description": "SQL DB SKU name (e.g. HS_PRMS_32 = Hyperscale Premium-series 32 vCore)."
+      }
+    },
+    "sqlSkuFamily": {
+      "type": "string",
+      "defaultValue": "PRMS",
+      "metadata": {
+        "description": "SQL DB SKU family (Gen5 | PRMS)."
+      }
+    },
+    "sqlSkuCapacity": {
+      "type": "int",
+      "defaultValue": 32,
+      "metadata": {
+        "description": "SQL DB SKU capacity (vCores)."
+      }
+    }
+  },
+  "variables": {
+    "aoaiName": "[format('zava-aoai-{0}', parameters('nameSuffix'))]",
+    "csName": "[format('zava-cs-{0}', parameters('nameSuffix'))]",
+    "apimName": "[format('zava-apim-{0}', parameters('nameSuffix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sql",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "serverName": {
+            "value": "[parameters('sqlServerName')]"
+          },
+          "databaseName": {
+            "value": "[parameters('sqlDatabaseName')]"
+          },
+          "aadAdminObjectId": {
+            "value": "[parameters('sqlAadAdminObjectId')]"
+          },
+          "aadAdminLogin": {
+            "value": "[parameters('sqlAadAdminLogin')]"
+          },
+          "skuName": {
+            "value": "[parameters('sqlSkuName')]"
+          },
+          "skuFamily": {
+            "value": "[parameters('sqlSkuFamily')]"
+          },
+          "skuCapacity": {
+            "value": "[parameters('sqlSkuCapacity')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "13041795493930028208"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "serverName": {
+              "type": "string"
+            },
+            "databaseName": {
+              "type": "string"
+            },
+            "aadAdminObjectId": {
+              "type": "string"
+            },
+            "aadAdminLogin": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "HS_PRMS_32",
+              "metadata": {
+                "description": "DB SKU name, e.g. HS_PRMS_32, HS_Gen5_32, HS_Gen5_2."
+              }
+            },
+            "skuFamily": {
+              "type": "string",
+              "defaultValue": "PRMS",
+              "metadata": {
+                "description": "DB SKU family. PRMS = Hyperscale Premium-series, Gen5 = standard Gen5."
+              }
+            },
+            "skuCapacity": {
+              "type": "int",
+              "defaultValue": 32,
+              "metadata": {
+                "description": "DB SKU capacity (vCores)."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Sql/servers",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[parameters('serverName')]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "version": "12.0",
+                "minimalTlsVersion": "1.2",
+                "publicNetworkAccess": "Enabled",
+                "administrators": {
+                  "administratorType": "ActiveDirectory",
+                  "principalType": "User",
+                  "login": "[parameters('aadAdminLogin')]",
+                  "sid": "[parameters('aadAdminObjectId')]",
+                  "tenantId": "[subscription().tenantId]",
+                  "azureADOnlyAuthentication": true
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', parameters('serverName'), 'AllowAllWindowsAzureIps')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', parameters('serverName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', parameters('serverName'), parameters('databaseName'))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "[parameters('skuName')]",
+                "tier": "Hyperscale",
+                "family": "[parameters('skuFamily')]",
+                "capacity": "[parameters('skuCapacity')]"
+              },
+              "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "zoneRedundant": false,
+                "readScale": "Disabled",
+                "requestedBackupStorageRedundancy": "Local"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', parameters('serverName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "serverFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', parameters('serverName')), '2023-08-01-preview').fullyQualifiedDomainName]"
+            },
+            "serverName": {
+              "type": "string",
+              "value": "[parameters('serverName')]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', parameters('serverName')), '2023-08-01-preview', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "openai",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "accountName": {
+            "value": "[variables('aoaiName')]"
+          },
+          "chatDeploymentName": {
+            "value": "[parameters('chatDeploymentName')]"
+          },
+          "chatModelName": {
+            "value": "[parameters('chatModelName')]"
+          },
+          "chatModelVersion": {
+            "value": "[parameters('chatModelVersion')]"
+          },
+          "chatCapacity": {
+            "value": "[parameters('chatCapacity')]"
+          },
+          "embedDeploymentName": {
+            "value": "[parameters('embedDeploymentName')]"
+          },
+          "embedModelName": {
+            "value": "[parameters('embedModelName')]"
+          },
+          "embedModelVersion": {
+            "value": "[parameters('embedModelVersion')]"
+          },
+          "embedCapacity": {
+            "value": "[parameters('embedCapacity')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "4160749545729519601"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "accountName": {
+              "type": "string"
+            },
+            "chatDeploymentName": {
+              "type": "string"
+            },
+            "chatModelName": {
+              "type": "string"
+            },
+            "chatModelVersion": {
+              "type": "string"
+            },
+            "chatCapacity": {
+              "type": "int"
+            },
+            "chatSkuName": {
+              "type": "string",
+              "defaultValue": "GlobalStandard"
+            },
+            "embedDeploymentName": {
+              "type": "string"
+            },
+            "embedModelName": {
+              "type": "string"
+            },
+            "embedModelVersion": {
+              "type": "string"
+            },
+            "embedCapacity": {
+              "type": "int"
+            },
+            "embedSkuName": {
+              "type": "string",
+              "defaultValue": "Standard"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2024-10-01",
+              "name": "[parameters('accountName')]",
+              "location": "[parameters('location')]",
+              "kind": "OpenAI",
+              "sku": {
+                "name": "S0"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "customSubDomainName": "[parameters('accountName')]",
+                "publicNetworkAccess": "Enabled",
+                "disableLocalAuth": false
+              }
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('chatDeploymentName'))]",
+              "sku": {
+                "name": "[parameters('chatSkuName')]",
+                "capacity": "[parameters('chatCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('chatModelName')]",
+                  "version": "[parameters('chatModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceCurrentVersionExpired"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('embedDeploymentName'))]",
+              "sku": {
+                "name": "[parameters('embedSkuName')]",
+                "capacity": "[parameters('embedCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('embedModelName')]",
+                  "version": "[parameters('embedModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceCurrentVersionExpired"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('accountName'), parameters('chatDeploymentName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "endpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').endpoint]"
+            },
+            "accountName": {
+              "type": "string",
+              "value": "[parameters('accountName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "contentsafety",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "accountName": {
+            "value": "[variables('csName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "8179477700035739338"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "accountName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2024-10-01",
+              "name": "[parameters('accountName')]",
+              "location": "[parameters('location')]",
+              "kind": "ContentSafety",
+              "sku": {
+                "name": "S0"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "customSubDomainName": "[parameters('accountName')]",
+                "publicNetworkAccess": "Enabled"
+              }
+            }
+          ],
+          "outputs": {
+            "endpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').endpoint]"
+            },
+            "accountName": {
+              "type": "string",
+              "value": "[parameters('accountName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "apim",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "apimName": {
+            "value": "[variables('apimName')]"
+          },
+          "aoaiEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'openai'), '2025-04-01').outputs.endpoint.value]"
+          },
+          "csEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'contentsafety'), '2025-04-01').outputs.endpoint.value]"
+          },
+          "chatDeploymentName": {
+            "value": "[parameters('chatDeploymentName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "16818136705249258445"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "apimName": {
+              "type": "string"
+            },
+            "aoaiEndpoint": {
+              "type": "string"
+            },
+            "csEndpoint": {
+              "type": "string"
+            },
+            "chatDeploymentName": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "$fxv#0": "<!--\r\n  BRK223 Azure OpenAI API policy.\r\n\r\n  Inbound order matters:\r\n    1. base                              — inherit product/global policies.\r\n    2. authentication-managed-identity   — fetch AAD bearer for AOAI (resource = cognitiveservices.azure.com).\r\n    3. set-header Authorization          — overwrite SQL MI bearer with APIM MI bearer.\r\n    4. set-backend-service               — pin to the AOAI backend declared in Bicep.\r\n    5. llm-token-limit                   — per-client-IP TPM cap. counter-key uses\r\n                                            context.Request.IpAddress because the\r\n                                            API is subscriptionRequired=false, so\r\n                                            context.Subscription is null and using\r\n                                            it as a counter-key throws 500.\r\n    6. llm-content-safety                — Azure Content Safety classifiers\r\n                                            (Hate / Violence / SelfHarm / Sexual on\r\n                                            EightSeverityLevels). shield-prompt is\r\n                                            OFF: Prompt Shields false-positives on\r\n                                            the structured SRE system prompt (the\r\n                                            \"Return ONLY this JSON shape\" instructions\r\n                                            look injection-like to the detector) and\r\n                                            would 403 the gateway proc against the\r\n                                            incident #5012 demo row.\r\n    7. llm-emit-token-metric             — App Insights metric emission.\r\n\r\n  enforce-on-completions=\"false\" keeps response streaming intact.\r\n-->\r\n<policies>\r\n    <inbound>\r\n        <base />\r\n\r\n        <authentication-managed-identity resource=\"https://cognitiveservices.azure.com\"\r\n                                         output-token-variable-name=\"msi-access-token\" />\r\n        <set-header name=\"Authorization\" exists-action=\"override\">\r\n            <value>@(\"Bearer \" + (string)context.Variables[\"msi-access-token\"])</value>\r\n        </set-header>\r\n\r\n        <set-backend-service backend-id=\"aoai-backend\" />\r\n\r\n        <llm-token-limit counter-key=\"@(context.Request.IpAddress)\"\r\n                         tokens-per-minute=\"500\"\r\n                         estimate-prompt-tokens=\"false\"\r\n                         remaining-tokens-variable-name=\"remainingTokens\" />\r\n\r\n        <llm-content-safety backend-id=\"cs-backend\"\r\n                            shield-prompt=\"false\"\r\n                            enforce-on-completions=\"false\"\r\n                            window-size=\"300\"\r\n                            window-overlap-size=\"100\">\r\n            <categories output-type=\"EightSeverityLevels\">\r\n                <category name=\"Hate\"     threshold=\"4\" />\r\n                <category name=\"Violence\" threshold=\"4\" />\r\n                <category name=\"SelfHarm\" threshold=\"2\" />\r\n                <category name=\"Sexual\"   threshold=\"2\" />\r\n            </categories>\r\n        </llm-content-safety>\r\n\r\n        <llm-emit-token-metric namespace=\"genai\">\r\n            <dimension name=\"API ID\" />\r\n            <dimension name=\"Client IP\" value=\"@(context.Request.IpAddress)\" />\r\n        </llm-emit-token-metric>\r\n    </inbound>\r\n    <backend>\r\n        <base />\r\n    </backend>\r\n    <outbound>\r\n        <base />\r\n    </outbound>\r\n    <on-error>\r\n        <base />\r\n    </on-error>\r\n</policies>\r\n"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ApiManagement/service",
+              "apiVersion": "2024-05-01",
+              "name": "[parameters('apimName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "BasicV2",
+                "capacity": 1
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "publisherName": "BRK223 Demo",
+                "publisherEmail": "bobward@microsoft.com",
+                "virtualNetworkType": "None"
+              }
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/backends",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', parameters('apimName'), 'aoai-backend')]",
+              "properties": {
+                "url": "[format('{0}openai', parameters('aoaiEndpoint'))]",
+                "protocol": "http",
+                "description": "Azure OpenAI account; MI auth applied via policy."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/backends",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', parameters('apimName'), 'cs-backend')]",
+              "properties": {
+                "url": "[parameters('csEndpoint')]",
+                "protocol": "http",
+                "description": "Azure AI Content Safety; consumed by llm-content-safety policy."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/apis",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', parameters('apimName'), 'azure-openai')]",
+              "properties": {
+                "displayName": "Azure OpenAI (gateway)",
+                "path": "openai",
+                "protocols": [
+                  "https"
+                ],
+                "subscriptionRequired": false,
+                "serviceUrl": "[format('{0}openai', parameters('aoaiEndpoint'))]",
+                "format": "openapi+json",
+                "value": "[string(createObject('openapi', '3.0.1', 'info', createObject('title', 'Azure OpenAI', 'version', '2024-10-21'), 'paths', createObject('/deployments/{deployment-id}/chat/completions', createObject('post', createObject('operationId', 'chat-completions', 'parameters', createArray(createObject('name', 'deployment-id', 'in', 'path', 'required', true(), 'schema', createObject('type', 'string')), createObject('name', 'api-version', 'in', 'query', 'required', true(), 'schema', createObject('type', 'string'))), 'requestBody', createObject('required', true(), 'content', createObject('application/json', createObject('schema', createObject('type', 'object')))), 'responses', createObject('200', createObject('description', 'OK')))), '/deployments/{deployment-id}/embeddings', createObject('post', createObject('operationId', 'embeddings', 'parameters', createArray(createObject('name', 'deployment-id', 'in', 'path', 'required', true(), 'schema', createObject('type', 'string')), createObject('name', 'api-version', 'in', 'query', 'required', true(), 'schema', createObject('type', 'string'))), 'requestBody', createObject('required', true(), 'content', createObject('application/json', createObject('schema', createObject('type', 'object')))), 'responses', createObject('200', createObject('description', 'OK')))))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/apis/policies",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('apimName'), 'azure-openai', 'policy')]",
+              "properties": {
+                "format": "rawxml",
+                "value": "[variables('$fxv#0')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimName'), 'azure-openai')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "gatewayUrl": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ApiManagement/service', parameters('apimName')), '2024-05-01').gatewayUrl]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ApiManagement/service', parameters('apimName')), '2024-05-01', 'full').identity.principalId]"
+            },
+            "apimName": {
+              "type": "string",
+              "value": "[parameters('apimName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'contentsafety')]",
+        "[resourceId('Microsoft.Resources/deployments', 'openai')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "roles",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "apimPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'apim'), '2025-04-01').outputs.principalId.value]"
+          },
+          "sqlPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.principalId.value]"
+          },
+          "aoaiAccountName": {
+            "value": "[variables('aoaiName')]"
+          },
+          "csAccountName": {
+            "value": "[variables('csName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "4242243997606928507"
+            }
+          },
+          "parameters": {
+            "apimPrincipalId": {
+              "type": "string"
+            },
+            "sqlPrincipalId": {
+              "type": "string"
+            },
+            "aoaiAccountName": {
+              "type": "string"
+            },
+            "csAccountName": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "cognitiveServicesUserRoleId": "a97b65f3-24c7-4388-baec-2e87135dc908"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aoaiAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aoaiAccountName')), parameters('apimPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
+                "principalId": "[parameters('apimPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('csAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('csAccountName')), parameters('apimPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
+                "principalId": "[parameters('apimPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aoaiAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aoaiAccountName')), parameters('sqlPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
+                "principalId": "[parameters('sqlPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'apim')]",
+        "[resourceId('Microsoft.Resources/deployments', 'sql')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.serverFqdn.value]"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "value": "[parameters('sqlDatabaseName')]"
+    },
+    "aoaiEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'openai'), '2025-04-01').outputs.endpoint.value]"
+    },
+    "aoaiAccountName": {
+      "type": "string",
+      "value": "[variables('aoaiName')]"
+    },
+    "csEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'contentsafety'), '2025-04-01').outputs.endpoint.value]"
+    },
+    "csAccountName": {
+      "type": "string",
+      "value": "[variables('csName')]"
+    },
+    "apimGatewayUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'apim'), '2025-04-01').outputs.gatewayUrl.value]"
+    },
+    "apimName": {
+      "type": "string",
+      "value": "[variables('apimName')]"
+    },
+    "chatDeploymentName": {
+      "type": "string",
+      "value": "[parameters('chatDeploymentName')]"
+    },
+    "embedDeploymentName": {
+      "type": "string",
+      "value": "[parameters('embedDeploymentName')]"
+    }
+  }
+}

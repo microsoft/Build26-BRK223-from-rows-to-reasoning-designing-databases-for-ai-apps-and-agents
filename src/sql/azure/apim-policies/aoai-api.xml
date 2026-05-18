@@ -1,0 +1,71 @@
+<!--
+  BRK223 Azure OpenAI API policy.
+
+  Inbound order matters:
+    1. base                              — inherit product/global policies.
+    2. authentication-managed-identity   — fetch AAD bearer for AOAI (resource = cognitiveservices.azure.com).
+    3. set-header Authorization          — overwrite SQL MI bearer with APIM MI bearer.
+    4. set-backend-service               — pin to the AOAI backend declared in Bicep.
+    5. llm-token-limit                   — per-client-IP TPM cap. counter-key uses
+                                            context.Request.IpAddress because the
+                                            API is subscriptionRequired=false, so
+                                            context.Subscription is null and using
+                                            it as a counter-key throws 500.
+    6. llm-content-safety                — Azure Content Safety classifiers
+                                            (Hate / Violence / SelfHarm / Sexual on
+                                            EightSeverityLevels). shield-prompt is
+                                            OFF: Prompt Shields false-positives on
+                                            the structured SRE system prompt (the
+                                            "Return ONLY this JSON shape" instructions
+                                            look injection-like to the detector) and
+                                            would 403 the gateway proc against the
+                                            incident #5012 demo row.
+    7. llm-emit-token-metric             — App Insights metric emission.
+
+  enforce-on-completions="false" keeps response streaming intact.
+-->
+<policies>
+    <inbound>
+        <base />
+
+        <authentication-managed-identity resource="https://cognitiveservices.azure.com"
+                                         output-token-variable-name="msi-access-token" />
+        <set-header name="Authorization" exists-action="override">
+            <value>@("Bearer " + (string)context.Variables["msi-access-token"])</value>
+        </set-header>
+
+        <set-backend-service backend-id="aoai-backend" />
+
+        <llm-token-limit counter-key="@(context.Request.IpAddress)"
+                         tokens-per-minute="500"
+                         estimate-prompt-tokens="false"
+                         remaining-tokens-variable-name="remainingTokens" />
+
+        <llm-content-safety backend-id="cs-backend"
+                            shield-prompt="false"
+                            enforce-on-completions="false"
+                            window-size="300"
+                            window-overlap-size="100">
+            <categories output-type="EightSeverityLevels">
+                <category name="Hate"     threshold="4" />
+                <category name="Violence" threshold="4" />
+                <category name="SelfHarm" threshold="2" />
+                <category name="Sexual"   threshold="2" />
+            </categories>
+        </llm-content-safety>
+
+        <llm-emit-token-metric namespace="genai">
+            <dimension name="API ID" />
+            <dimension name="Client IP" value="@(context.Request.IpAddress)" />
+        </llm-emit-token-metric>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

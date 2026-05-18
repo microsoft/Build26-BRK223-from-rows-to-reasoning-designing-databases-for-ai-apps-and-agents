@@ -1,0 +1,238 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "180096343793228226"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region. Default: resource group region."
+      }
+    },
+    "nameSuffix": {
+      "type": "string",
+      "metadata": {
+        "description": "Short suffix for globally-unique resource names. Must match main.bicep nameSuffix so the SQL FQDN etc. resolve consistently."
+      }
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "SQL logical server FQDN (e.g. zavasqlserver.database.windows.net). Used to build the DAB connection string."
+      }
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "defaultValue": "zavalivesitedb",
+      "metadata": {
+        "description": "SQL database name. Default: zavalivesitedb."
+      }
+    },
+    "dabImageTag": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "DAB container image tag (set by Prep-Cloud-Hosting.ps1 after az acr build)."
+      }
+    },
+    "dabAllowedOrigins": {
+      "type": "array",
+      "defaultValue": [
+        "*"
+      ],
+      "metadata": {
+        "description": "Allowed CORS origins for the DAB ingress. The SWA URL is added after SWA is provisioned (chicken-and-egg)."
+      }
+    }
+  },
+  "variables": {
+    "acrName": "[replace(format('zavaacr{0}', parameters('nameSuffix')), '-', '')]",
+    "acaEnvName": "[format('zava-aca-env-{0}', parameters('nameSuffix'))]",
+    "acaDabName": "[format('zava-dab-{0}', parameters('nameSuffix'))]",
+    "swaName": "[format('zava-web-{0}', parameters('nameSuffix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-11-01-preview",
+      "name": "[variables('acrName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": false,
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('acaEnvName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "workloadProfiles": [
+          {
+            "name": "Consumption",
+            "workloadProfileType": "Consumption"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('acaDabName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('acaEnvName'))]",
+        "workloadProfileName": "Consumption",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 5000,
+            "transport": "auto",
+            "allowInsecure": false,
+            "corsPolicy": {
+              "allowedOrigins": "[parameters('dabAllowedOrigins')]",
+              "allowedMethods": [
+                "GET",
+                "POST",
+                "OPTIONS"
+              ],
+              "allowedHeaders": [
+                "*"
+              ],
+              "allowCredentials": false
+            }
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-11-01-preview').loginServer]",
+              "identity": "system"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "mssql-connection-string",
+              "value": "[format('Server={0};Database={1};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Command Timeout=180', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "dab",
+              "image": "[format('{0}/zava-dab:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-11-01-preview').loginServer, parameters('dabImageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "MSSQL_CONNECTION_STRING",
+                  "secretRef": "mssql-connection-string"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://0.0.0.0:5000"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/api/Incident?$first=1",
+                    "port": 5000
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', variables('acaEnvName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), resourceId('Microsoft.App/containerApps', variables('acaDabName')), '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', variables('acaDabName')), '2024-03-01', 'full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', variables('acaDabName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('swaName')]",
+      "location": "eastus2",
+      "sku": {
+        "name": "Free",
+        "tier": "Free"
+      },
+      "properties": {
+        "provider": "Custom"
+      }
+    }
+  ],
+  "outputs": {
+    "acrName": {
+      "type": "string",
+      "value": "[variables('acrName')]"
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-11-01-preview').loginServer]"
+    },
+    "acaEnvName": {
+      "type": "string",
+      "value": "[variables('acaEnvName')]"
+    },
+    "acaDabName": {
+      "type": "string",
+      "value": "[variables('acaDabName')]"
+    },
+    "acaDabFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('acaDabName')), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "acaDabPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('acaDabName')), '2024-03-01', 'full').identity.principalId]"
+    },
+    "swaName": {
+      "type": "string",
+      "value": "[variables('swaName')]"
+    },
+    "swaDefaultHostname": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/staticSites', variables('swaName')), '2023-12-01').defaultHostname]"
+    }
+  }
+}
