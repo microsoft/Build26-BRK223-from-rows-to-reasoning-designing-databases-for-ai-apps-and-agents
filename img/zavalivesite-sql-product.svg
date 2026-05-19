@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" font-family="Segoe UI, Arial, sans-serif">
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FAFAFA"/>
+
+  <!-- Title -->
+  <text x="96" y="110" font-size="64" font-weight="700" fill="#243A5E">The Zava on-call engineer's problem</text>
+  <text x="96" y="170" font-size="34" font-weight="400" fill="#605E5C">Operational data, the runbooks that explain it, and the AI that could reason over it — all live in different worlds.</text>
+
+  <!-- Decorative divider -->
+  <line x1="96" y1="200" x2="1824" y2="200" stroke="#E1DFDD" stroke-width="2"/>
+
+  <!-- Center: incident / engineer / question -->
+  <g transform="translate(960,560)">
+    <circle r="170" fill="#FFFFFF" stroke="#243A5E" stroke-width="4"/>
+    <text text-anchor="middle" y="-50" font-size="28" font-weight="600" fill="#605E5C">14:30 UTC</text>
+    <text text-anchor="middle" y="-8" font-size="38" font-weight="700" fill="#D83B01">SEV1 · #5012</text>
+    <text text-anchor="middle" y="40" font-size="26" fill="#243A5E">Payroll batch</text>
+    <text text-anchor="middle" y="76" font-size="26" fill="#243A5E">deadlock surge</text>
+    <text text-anchor="middle" y="124" font-size="34" font-weight="700" fill="#243A5E">Mitigate?</text>
+  </g>
+
+  <!-- Quadrant boxes (4 worlds) -->
+  <!-- Top-left: Operational data -->
+  <g>
+    <rect x="120" y="280" width="540" height="220" rx="14" fill="#FFFFFF" stroke="#0078D4" stroke-width="3"/>
+    <text x="148" y="332" font-size="22" font-weight="700" fill="#0078D4" letter-spacing="2">OPERATIONAL DATA</text>
+    <text x="148" y="380" font-size="30" font-weight="600" fill="#243A5E">The incident row itself</text>
+    <text x="148" y="420" font-size="24" fill="#605E5C">Alert JSON · severity · tenant · service</text>
+    <text x="148" y="454" font-size="24" fill="#605E5C">Current status · who's on call</text>
+    <text x="148" y="488" font-size="20" font-style="italic" fill="#8A8886">lives in the OLTP database</text>
+  </g>
+
+  <!-- Top-right: Institutional knowledge -->
+  <g>
+    <rect x="1260" y="280" width="540" height="220" rx="14" fill="#FFFFFF" stroke="#0078D4" stroke-width="3"/>
+    <text x="1288" y="332" font-size="22" font-weight="700" fill="#0078D4" letter-spacing="2">INSTITUTIONAL KNOWLEDGE</text>
+    <text x="1288" y="380" font-size="30" font-weight="600" fill="#243A5E">What we've seen before</text>
+    <text x="1288" y="420" font-size="24" fill="#605E5C">Runbooks · prior incidents · embeddings</text>
+    <text x="1288" y="454" font-size="24" fill="#605E5C">Wiki articles · post-mortems</text>
+    <text x="1288" y="488" font-size="20" font-style="italic" fill="#8A8886">lives in a wiki / vector store / search</text>
+  </g>
+
+  <!-- Bottom-left: Live state -->
+  <g>
+    <rect x="120" y="700" width="540" height="220" rx="14" fill="#FFFFFF" stroke="#0078D4" stroke-width="3"/>
+    <text x="148" y="752" font-size="22" font-weight="700" fill="#0078D4" letter-spacing="2">LIVE SYSTEM STATE</text>
+    <text x="148" y="800" font-size="30" font-weight="600" fill="#243A5E">What the engine is doing now</text>
+    <text x="148" y="840" font-size="24" fill="#605E5C">DMVs · query plans · waits · deadlocks</text>
+    <text x="148" y="874" font-size="24" fill="#605E5C">Missing indexes · resource pressure</text>
+    <text x="148" y="908" font-size="20" font-style="italic" fill="#8A8886">behind DBA-only tooling</text>
+  </g>
+
+  <!-- Bottom-right: AI model -->
+  <g>
+    <rect x="1260" y="700" width="540" height="220" rx="14" fill="#FFFFFF" stroke="#0078D4" stroke-width="3"/>
+    <text x="1288" y="752" font-size="22" font-weight="700" fill="#0078D4" letter-spacing="2">REASONING &amp; GENERATION</text>
+    <text x="1288" y="800" font-size="30" font-weight="600" fill="#243A5E">The model that could write the plan</text>
+    <text x="1288" y="840" font-size="24" fill="#605E5C">LLM · agent loop · grounding</text>
+    <text x="1288" y="874" font-size="24" fill="#605E5C">Embeddings · tool calls · citations</text>
+    <text x="1288" y="908" font-size="20" font-style="italic" fill="#8A8886">in a separate AI service</text>
+  </g>
+
+  <!-- Friction arrows (engineer alt-tabs / copies / pastes) -->
+  <g stroke="#D83B01" stroke-width="3" fill="none">
+    <!-- top-left -> center -->
+    <path d="M 660 410 Q 800 460 832 510" marker-end="url(#arrow)"/>
+    <!-- top-right -> center -->
+    <path d="M 1260 410 Q 1120 460 1088 510" marker-end="url(#arrow)"/>
+    <!-- bottom-left -> center -->
+    <path d="M 660 790 Q 800 700 832 660" marker-end="url(#arrow)"/>
+    <!-- bottom-right -> center -->
+    <path d="M 1260 790 Q 1120 700 1088 660" marker-end="url(#arrow)"/>
+  </g>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#D83B01"/>
+    </marker>
+  </defs>
+
+  <!-- Friction labels removed per request -->
+
+  <!-- Bottom pivot banner -->
+  <rect x="96" y="980" width="1728" height="76" rx="10" fill="#243A5E"/>
+  <text x="960" y="1032" text-anchor="middle" font-size="32" font-weight="600" fill="#FFFFFF">What if all four lived in one place — the database itself?</text>
+</svg>
