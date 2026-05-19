@@ -165,7 +165,7 @@ Click the **Plan** tab. Point at two operators:
 - **Vector Index Seek** on `vec_archive_embedding` — DiskANN over `IncidentArchive.Embedding` (~150k weakly-tagged rows). Semantic search drives this side because the structured filters aren't selective enough on their own; tenant/errorCode run as residual filters on the bookmark side.
 - **JSON Index Seek** on `ix_runbook_tags` for `$.service = 'Payroll'` — narrows the ~6k runbook chunks down to a handful, and then exact `vector_distance` ranks them. No DiskANN on this side because the structured filter is the right driver.
 
-Spoken cue: *"One statement. Two specialized indexes. DiskANN drives the big, weakly-tagged corpus on the left; the JSON index drives the small, well-tagged corpus on the right. The optimizer picked the right tool for each side — not me, not the developer. Vector search and structured search composed by the engine, in one query."*
+Spoken cue: *"One statement. Two specialized indexes. DiskANN drives the big, weakly-tagged corpus on the left; the JSON index drives the small, well-tagged corpus on the right. The optimizer picked the right tool for each side — not me, not the developer. Vector search and structured search composed by the engine, in one query.* **Two index families. One plan. Only Azure SQL ships both."***
 
 > **Why this matters.** Most "hybrid search" demos run the two halves in separate stages (full-text or filter, then re-rank with vectors) glued together in application code. Here it's one T-SQL statement, one plan, two specialized index seeks. That's the shape that survives going from a demo to a production OLTP workload.
 
