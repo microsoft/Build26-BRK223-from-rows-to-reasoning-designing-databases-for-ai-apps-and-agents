@@ -1,61 +1,222 @@
-# BRK223 — *Azure SQL: From Database to Live Site, with AI in the Loop*
+# BRK223 — *Azure SQL: From Database to Live Site, with AI Agents in the Loop*
 
 An end-to-end sample showing how Azure SQL (vector + JSON + ledger + AI)
 grounds an incident-triage agent. One container. One web page. One AI agent.
 
----
+The two folders that matter:
 
-## What this repo contains
+- **[local/](local/)** — run the entire demo on a laptop. Single Docker container hosts SQL + Ollama + a Caddy TLS proxy; an Aspire AppHost wires up the Blazor WASM UI and the DAB REST/MCP endpoint.
+- **[azure/](azure/)** — lift the same demo to Azure (Hyperscale + Azure OpenAI + APIM + Container Apps), all driven by Bicep.
 
-```
-BRK223/
-├── .github/
-│   ├── agents/
-│   │   └── live-site-sql.agent.md   ← custom agent VS Code auto-discovers;
-│   │                                  select from the Copilot Chat agent
-│   │                                  dropdown to load the SKILL + MCP tools
-│   └── skills/
-│       └── live-site-sql/SKILL.md   ← agent playbook for incident triage
-│                                      (protocol, diagnostic catalog,
-│                                      output contract). Loaded by the
-│                                      live-site-sql agent.
-└── sql/                              ← the entire demo
-    ├── README.md                    ← you are here
-    ├── architecture.html
-    ├── design.md                    ← locked design spec
-    ├── demo.md                      ← step-by-step walkthrough
-    ├── local/                       ← run the full sample on a laptop
-    │   ├── Build.ps1                ← one-shot setup
-    │   ├── deploy-prestage.ps1      ← schema + corpus + embeddings
-    │   ├── Start-AzureSqlContainer.ps1
-    │   ├── sqlscripts/              ← 00→08 deploy + interactive scripts
-    │   ├── dotnet/                  ← Blazor Web + Aspire AppHost + DAB config
-    │   └── ...
-    └── azure/                       ← lift the same demo to Azure
-        ├── Prep-Cloud-Hosting.ps1
-        └── bicep/
-```
-
-> **About the agent and skill files.** When you open the `BRK223/` folder
-> in VS Code, Copilot Chat auto-discovers `.github/agents/live-site-sql.agent.md`
-> and adds **live-site-sql** to the agent dropdown. Selecting it loads the
-> body of the `.agent.md` as the system prompt, binds the `zavalivesite-sql`
-> MCP tools, and lets the agent pull in `.github/skills/live-site-sql/SKILL.md`
-> when relevant. No manual file attachment needed.
+Reference docs sit next to this README: **[design.md](design.md)** (locked design spec — schema, beats, contracts), **[demo.md](demo.md)** (the on-stage walkthrough). The inventory of every script and folder is in [What's in here](#whats-in-here) below.
 
 ---
+
+## The T-SQL on display
+
+This demo isn't a Blazor app that happens to call a database — it's a tour of the **Azure SQL / SQL Server 2025 AI surface**, and almost every interesting line is T-SQL. Highlights, with links to where they actually run:
+
+### 1. One `INSERT` exercises **five** new T-SQL features at once
+
+The on-stage "incident lands" moment ([local/sqlscripts/05_create_incident.sql](local/sqlscripts/05_create_incident.sql)) is a single `INSERT` that does:
+
+```sql
+INSERT dbo.Incident (..., AlertPayload, Tags, Embedding)
+SELECT 5012,
+       JSON_VALUE(@alert, '$.tenantId'),                  -- (1) JSON_VALUE on json type
+       ...
+       @alert,                                            -- (2) json column (not nvarchar(max))
+       (SELECT COALESCE(
+              JSON_VALUE(@alert, '$.errorCode'),
+              (SELECT TOP 1 REPLACE(m.match_value, 'Msg ', '')
+                 FROM REGEXP_MATCHES(@note,
+                       '\bMsg\s+\d{3,5}\b') m))         -- (3) REGEXP_MATCHES
+              AS errorCode, ...
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),            -- (4) FOR JSON PATH shape-on-the-fly
+       AI_GENERATE_EMBEDDINGS(@note USE MODEL OllamaMxbai); -- (5) AI_GENERATE_EMBEDDINGS → vector(1024)
+```
+
+Five SQL Server 2025 / Azure SQL features in one statement: native `json` type, `REGEXP_MATCHES`, `FOR JSON PATH`, `AI_GENERATE_EMBEDDINGS ... USE MODEL`, and the `vector(N)` data type. No app-side glue, no separate embedding call, no JSON parsing in a middle tier.
+
+### 2. `CREATE EXTERNAL MODEL` binds the database to an embedding model
+
+[local/sqlscripts/01_schema.sql](local/sqlscripts/01_schema.sql) — one DDL statement points the database at the model that `AI_GENERATE_EMBEDDINGS` resolves:
+
+```sql
+CREATE EXTERNAL MODEL OllamaMxbai
+WITH (
+    LOCATION   = 'https://localhost:8444/v1/embeddings',
+    API_FORMAT = 'OpenAI',
+    MODEL_TYPE = EMBEDDINGS,
+    MODEL      = 'mxbai-embed-large'
+);
+```
+
+In cloud (Azure SQL Hyperscale), the same DDL points at Azure OpenAI `text-embedding-3-small` with `API_FORMAT = 'Azure OpenAI'`. Application code never changes — the model is a database object.
+
+### 3. Hybrid search: **one statement, two specialized access paths**
+
+[local/sqlscripts/01_schema.sql](local/sqlscripts/01_schema.sql) `usp_HybridSearch` is the centerpiece. One stored procedure call returns ranked incidents *and* runbooks, with the optimizer composing two completely different index paths:
+
+| Side | Index used | Why |
+|---|---|---|
+| `IncidentArchive` (~150k rows, weakly tagged) | **DiskANN Vector Index Seek** via `VECTOR_SEARCH(... METRIC = 'cosine')` with `TOP (@k) WITH APPROXIMATE` | Approximate nearest neighbor over a large corpus; structured filters (`TenantId`, `errorCode`) run as residual predicates on the bookmark side. |
+| `Runbook` (~20 docs / ~6k chunks, well tagged) | **JSON Index Seek** on `Tags ($.service)`, then exact `vector_distance('cosine', ...)` over the chunks | Structured filter narrows the candidate set to a few dozen rows — DiskANN isn't worth it on that size. |
+
+Both halves merge in a single result set ordered by cosine distance. The proc body is in [local/sqlscripts/01_schema.sql](local/sqlscripts/01_schema.sql); the demo invocation is [local/sqlscripts/06_hybrid_search.sql](local/sqlscripts/06_hybrid_search.sql).
+
+```sql
+-- DiskANN side
+SELECT TOP (@k) WITH APPROXIMATE ...
+FROM   VECTOR_SEARCH(
+         TABLE = dbo.IncidentArchive AS a,
+         COLUMN = Embedding,
+         SIMILAR_TO = @qvec,
+         METRIC = 'cosine') AS r
+WHERE  a.TenantId = @lTenantId
+   AND JSON_VALUE(a.Tags, '$.errorCode') = @lErrorCode;
+
+-- JSON Index Seek + exact distance side
+SELECT TOP (@k) ..., vector_distance('cosine', rc.Embedding, @qvec) AS distance
+FROM   dbo.Runbook      rb
+JOIN   dbo.RunbookChunk rc ON rc.RunbookId = rb.RunbookId
+WHERE  JSON_VALUE(rb.Tags, '$.service') = @lService
+ORDER  BY distance;
+```
+
+### 4. `CREATE JSON INDEX` + `CREATE VECTOR INDEX` side by side
+
+[local/sqlscripts/01_schema.sql](local/sqlscripts/01_schema.sql) and [local/sqlscripts/03_vector_indexes.sql](local/sqlscripts/03_vector_indexes.sql):
+
+```sql
+CREATE JSON INDEX ix_runbook_tags
+    ON dbo.Runbook (Tags)
+    FOR ('$.service', '$.tags');
+
+CREATE VECTOR INDEX vec_archive_embedding
+    ON dbo.IncidentArchive (Embedding)
+    WITH (METRIC = 'cosine');
+```
+
+Two brand-new index types, both first-class in T-SQL DDL, both used in the same proc.
+
+### 5. `sp_invoke_external_rest_endpoint` calls the chat model from T-SQL
+
+`MODEL_TYPE = EMBEDDINGS` is the only value `CREATE EXTERNAL MODEL` accepts today, so chat completions go through `sp_invoke_external_rest_endpoint` — and the demo does the entire RAG flow from inside [local/sqlscripts/04a_proc_generate_mitigation.sql](local/sqlscripts/04a_proc_generate_mitigation.sql):
+
+```sql
+DECLARE @body nvarchar(max) = (
+    SELECT  @ChatModel                          AS [model],
+            0.2                                 AS [temperature],
+            JSON_OBJECT('type': 'json_object')  AS [response_format],
+            JSON_ARRAY(
+                JSON_OBJECT('role': 'system', 'content': @system),
+                JSON_OBJECT('role': 'user',   'content': @user))   AS [messages]
+    FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+EXEC @ret = sp_invoke_external_rest_endpoint
+    @url = @ChatUrl, @method = 'POST', @headers = @headers,
+    @payload = @body, @timeout = 180, @response = @response OUTPUT;
+
+-- Parse and persist into a json column.
+DECLARE @assistant nvarchar(max) =
+    JSON_VALUE(@response, '$.result.choices[0].message.content');
+IF ISJSON(@assistant) = 0 RAISERROR('...');
+
+UPDATE dbo.Incident
+   SET ProposedMitigation = CAST(@assistant AS json),
+       Status             = N'mitigating'
+ WHERE IncidentId = @IncidentId;
+```
+
+`JSON_OBJECT` / `JSON_ARRAY` build the OpenAI-shaped request body without any string concatenation; `JSON_VALUE` extracts the assistant's response; `ISJSON` guards against malformed JSON; the result lands in a typed `json` column — the entire RAG round trip runs in one stored procedure.
+
+### 6. Append-only ledger as the audit trail
+
+`dbo.AppLog` is declared `WITH (LEDGER = ON (APPEND_ONLY = ON))` in [local/sqlscripts/01_schema.sql](local/sqlscripts/01_schema.sql). Every time the agent writes a mitigation, [local/sqlscripts/04a_proc_generate_mitigation.sql](local/sqlscripts/04a_proc_generate_mitigation.sql) appends a row — cryptographically chained, impossible to update or backdate. Beat 3 closes the loop by `SELECT`ing the agent's action straight out of the ledger.
+
+### 7. Azure SQL cloud defaults, applied to the box engine
+
+[local/sqlscripts/00_setup.sql](local/sqlscripts/00_setup.sql) flips on the modern engine defaults so the local container behaves like Azure SQL Database:
+
+```sql
+ALTER DATABASE zavalivesitedb SET ACCELERATED_DATABASE_RECOVERY = ON;
+ALTER DATABASE zavalivesitedb SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE;
+ALTER DATABASE zavalivesitedb SET OPTIMIZED_LOCKING = ON;     -- requires ADR + RCSI
+ALTER DATABASE SCOPED CONFIGURATION SET PREVIEW_FEATURES = ON; -- VECTOR_SEARCH / CREATE VECTOR INDEX
+```
+
+ADR → RCSI → Optimized Locking in that order (OL has the other two as prerequisites). Optimized Locking is what keeps the Beat 1 five-feature `INSERT` from blocking the page's 2-second poller against a multi-thousand-row corpus.
+
+### 8. Diagnostic procs designed for MCP
+
+Three procs in [local/sqlscripts/04b_diagnostic_procs.sql](local/sqlscripts/04b_diagnostic_procs.sql) — `usp_DxIndexExists`, `usp_DxResourcePressure`, `usp_DxDeadlockRecent` — each returns **one row** whose first column is `finding` (kebab-case verdict: `index_present`, `index_missing`, `pressure_high`, `no_deadlock_history`, …) plus evidence columns from DMVs (`sys.indexes`, `sys.dm_os_wait_stats`, the system deadlock XEvent ring buffer). That shape is what makes them usable as MCP tools — DAB exposes them as `dx_index_exists` / `dx_resource_pressure` / `dx_deadlock_recent`, and the agent reads `finding` to branch its plan.
+
+### Cheat sheet — which feature lights up on which beat
+
+| Beat | Headline T-SQL features | Script |
+|---|---|---|
+| **1** Incident lands | `json`, `JSON_VALUE`, `REGEXP_MATCHES`, `FOR JSON PATH`, `AI_GENERATE_EMBEDDINGS`, `vector(1024)` | [05_create_incident.sql](local/sqlscripts/05_create_incident.sql) |
+| **2** Hybrid search | `VECTOR_SEARCH` + DiskANN, `vector_distance`, `CREATE JSON INDEX`, JSON Index Seek, `CREATE EXTERNAL MODEL` | [01_schema.sql `usp_HybridSearch`](local/sqlscripts/01_schema.sql), [03_vector_indexes.sql](local/sqlscripts/03_vector_indexes.sql), [06_hybrid_search.sql](local/sqlscripts/06_hybrid_search.sql) |
+| **3** Timeline | `LEDGER = ON (APPEND_ONLY = ON)`, `sys.database_ledger_*` | [01_schema.sql `AppLog`](local/sqlscripts/01_schema.sql), [07_log_timeline.sql](local/sqlscripts/07_log_timeline.sql) |
+| **4** Agent triages + mitigates | `sp_invoke_external_rest_endpoint`, `JSON_OBJECT`, `JSON_ARRAY`, `ISJSON`, writeback to `json`, `sys.dm_*` DMVs in `usp_Dx*` | [04a_proc_generate_mitigation.sql](local/sqlscripts/04a_proc_generate_mitigation.sql), [04b_diagnostic_procs.sql](local/sqlscripts/04b_diagnostic_procs.sql) |
+
+---
+
+## What's in here
+
+### `local/`
+
+Scripts are PowerShell unless noted. Run them from `src/sql/local/`.
+
+| Purpose | Scripts |
+|---|---|
+| **Bootstrap (run once)** | [`Build.ps1`](local/Build.ps1) — one-shot 13-step setup: build the SQL+AI container image, start it, deploy schema/corpus/embeddings, build the .NET solution. [`Verify-Build.ps1`](local/Verify-Build.ps1) — post-build smoke checks. |
+| **Demo lifecycle** | [`Start-LiveSite.ps1`](local/Start-LiveSite.ps1) / [`Stop-LiveSite.ps1`](local/Stop-LiveSite.ps1) — start/stop the Aspire AppHost (Blazor WASM + DAB). [`Open-LiveSite.ps1`](local/Open-LiveSite.ps1) — open the browser to the running page. [`Prep-Demo.ps1`](local/Prep-Demo.ps1) — pre-stage everything immediately before going on stage. |
+| **On-stage actions** | [`Insert-Incident.ps1`](local/Insert-Incident.ps1) — Beat 1: fire the five-feature INSERT that creates incident 5012. [`Generate-Mitigation.ps1`](local/Generate-Mitigation.ps1) — Beat 4 fallback if you want to run mitigation from the shell instead of from the agent. |
+| **Reset between rehearsals** | [`Reset-ForBeat2.ps1`](local/Reset-ForBeat2.ps1) — rewind to the "just after incident landed" state. [`Reset-Incident.ps1`](local/Reset-Incident.ps1) — wipe 5012 and re-seed. [`Teardown-LiveSite.ps1`](local/Teardown-LiveSite.ps1) — remove the container entirely. |
+| **Container internals** | [`Start-AzureSqlContainer.ps1`](local/Start-AzureSqlContainer.ps1) — bring up the SQL container (called by `Build.ps1`; runnable on its own). [`Prepare-AiContainer.ps1`](local/Prepare-AiContainer.ps1) — install Ollama + Caddy and pull the embedding/chat models inside the container. [`Restart-AiServices.ps1`](local/Restart-AiServices.ps1) / [`Warmup-Ai.ps1`](local/Warmup-Ai.ps1) — kick the AI side awake before a run. |
+| **Diagnostics** | [`Test-AzureSqlConnection.ps1`](local/Test-AzureSqlConnection.ps1) — round-trip a query through the bundled `sqlsim` client. [`Test-AgentPath.ps1`](local/Test-AgentPath.ps1) — verify the MCP/DAB endpoint the agent hits. [`Test-DomainAllowlist.sql`](local/Test-DomainAllowlist.sql) — confirm `sp_invoke_external_rest_endpoint` will accept the Ollama URL. [`List-CopilotModels.ps1`](local/List-CopilotModels.ps1) — list the chat models VS Code Copilot has available. |
+| **Shared helpers** | [`Common.ps1`](local/Common.ps1) — dot-sourced by other scripts. Owns `Get-Sqlsim` (sqlsim path resolution) and `Invoke-SqlsimScript` (consistent script execution). |
+| **T-SQL deploy order** | [`sqlscripts/`](local/sqlscripts/) — numbered 00→07 in execution order. `00_setup` (DB-level options) → `01_schema` (tables, external model, ledger, `usp_HybridSearch`) → `02*_seed*` (incident + runbook corpus) → `03_vector_indexes` + `03b_runbook_chunks` → `04a_proc_generate_mitigation` + `04b_diagnostic_procs` → `05_create_incident` (Beat 1) → `06_hybrid_search` (Beat 2) → `07_log_timeline` (Beat 3). Files with a leading underscore (`_bootstrap_login`, `_reset_for_beat2`) are interactive/out-of-band helpers called from PowerShell, not part of the linear deploy. |
+| **.NET solution** | [`dotnet/`](local/dotnet/) — `AppHost/` is the Aspire orchestrator (Blazor WASM on :8080, DAB on :8765), `Web/` is the Blazor page. |
+| **Other** | [`utilities/`](local/utilities/) — bundled `sqlsim.exe` (preferred SQL client; sets the right `SET` options automatically and handles `:setvar` substitution, so the deploy scripts run identically to how they would in SSMS). **🆕 First look** — `sqlsim` is a new Microsoft client coming soon publicly; this repo includes a copy so the demo works today. [`web/`](local/web/) — static assets served by the page. |
+
+### `azure/`
+
+| Purpose | Files |
+|---|---|
+| **Data tier (Beats 1–4 minimum)** | [`Prep-Cloud.ps1`](azure/Prep-Cloud.ps1) — deploy Hyperscale + Azure OpenAI + APIM via [`bicep/main.bicep`](azure/bicep/main.bicep), then apply [`sqlscripts/`](azure/sqlscripts/) (cloud variant of the local deploy — Azure OpenAI as the external model, APIM as the proxy). Parameters live in [`bicep/params.json`](azure/bicep/params.json). |
+| **App tier (optional)** | [`Prep-Cloud-Hosting.ps1`](azure/Prep-Cloud-Hosting.ps1) — adds Container Apps hosting for the Blazor + DAB layer via [`bicep/hosting.bicep`](azure/bicep/hosting.bicep). [`README-HOSTING.md`](azure/README-HOSTING.md) — what this layer does and why it's separate. [`hosting/`](azure/hosting/) — DAB Dockerfile, cloud DAB config, MCP server descriptor, and SQL grant for the managed identity. |
+| **APIM policy** | [`apim-policies/aoai-api.xml`](azure/apim-policies/aoai-api.xml) — the inbound policy that fronts Azure OpenAI (auth, rate limit, model routing). |
+| **Reset / teardown** | [`Reset-Stack.ps1`](azure/Reset-Stack.ps1) — rewind cloud state for another rehearsal. [`Cleanup-Cloud.ps1`](azure/Cleanup-Cloud.ps1) — delete data-tier resources. [`Teardown-Cloud-Hosting.ps1`](azure/Teardown-Cloud-Hosting.ps1) — delete app-tier resources. |
+
+The custom Copilot Chat agent (`live-site-sql`) lives in `../.github/agents/` and `../.github/skills/` at the repo root — see [The `live-site-sql` agent](#the-live-site-sql-agent) below for how VS Code discovers and wires it up.
+
+---
+
+## Sneak peek: the new Azure SQL container
+
+> 🆕 **Coming soon — a publicly distributable Azure SQL container.** This demo
+> is one of the first end-to-end samples authored against it. The image
+> brings the **Azure SQL engine** (not SQL Server) to your laptop —
+> Hyperscale-style storage, the modern AI surface (`vector`, DiskANN,
+> `AI_GENERATE_EMBEDDINGS`, `CREATE EXTERNAL MODEL`, `sp_invoke_external_rest_endpoint`),
+> JSON type + JSON indexes, append-only ledger, and the Azure SQL
+> defaults (ADR, RCSI, Optimized Locking) all in a single `docker run`.
+> Watch [aka.ms/azure-sql-container](https://aka.ms/azure-sql-container)
+> for the public registry path.
 
 ## Important: about the SQL container used by this demo
 
 The local demo was authored against an **Azure SQL preview container**
-(*"first look"*) that, at the time this source ships, **is not publicly
-available**. That image may become a publicly distributable Azure SQL
-container at a later date — when it does, watch
-[aka.ms/azure-sql-container](https://aka.ms/azure-sql-container) for the
-official registry path.
+(*"first look"*) that, at the time this source ships, **is not yet
+publicly available**. When the public image lands, the path at
+[aka.ms/azure-sql-container](https://aka.ms/azure-sql-container) will
+be the one to use.
 
 Because of that, the `Start-AzureSqlContainer.ps1` script in this repo
-points at an image you almost certainly cannot pull. You have two
+points at an image you almost certainly cannot pull yet. You have two
 practical options:
 
 1. **Wait for the public Azure SQL container** and update the image

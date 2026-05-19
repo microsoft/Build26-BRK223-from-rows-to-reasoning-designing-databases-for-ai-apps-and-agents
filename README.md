@@ -51,7 +51,7 @@ Each demo is self-contained under `src/`. Open the demo's README for prerequisit
 
 | Demo | What it shows | Status |
 |---|---|---|
-| **[Azure SQL — From Database to Live Site, with AI in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
+| **[Azure SQL — From Database to Live Site, with AI Agents in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
 | **Cosmos DB** | *Coming soon.* | 🚧 In progress |
 | **Azure HorizonDB (PostgreSQL)** | *Coming soon.* | 🚧 In progress |
 
