@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -14.375 1260 708.75" width="1260" height="708.75" preserveAspectRatio="xMidYMid meet" role="img"
+     aria-label="Azure: Blazor app and Copilot agent talk to the same DAB; DAB connects to Azure SQL Hyperscale; Hyperscale calls Azure OpenAI through an APIM GenAI gateway using managed identity.">
+  <style>
+    .box        { fill:#1a2147; stroke:#2a3360; stroke-width:1.5; }
+    .box-sql    { fill:#2a1118; stroke:#cc2936; }
+    .box-dab    { fill:#0f1a3a; stroke:#2563eb; }
+    .box-agent  { fill:#1d1535; stroke:#8b5cf6; }
+    .box-ai     { fill:#0a2231; stroke:#0ea5e9; }
+    .box-apim   { fill:#0a2826; stroke:#14b8a6; }
+    .box-browser{ fill:#15212e; stroke:#64748b; }
+    .label-title  { fill:#e8ecf8; font-weight:700; font-size:17px; font-family:'Segoe UI', system-ui, sans-serif; }
+    .label-sub    { fill:#a9b3d6; font-size:13px; font-family:'Segoe UI', system-ui, sans-serif; }
+    .label-mono   { fill:#e8ecf8; font-size:13.5px; font-family:Consolas, 'Courier New', monospace; }
+    .label-mono-d { fill:#a9b3d6; font-size:12.5px; font-family:Consolas, 'Courier New', monospace; }
+    .badge        { fill:#e8ecf8; font-size:13px; font-weight:700; font-family:'Segoe UI', system-ui, sans-serif; }
+    .edge        { fill:none; stroke-width:2; }
+    .edge-rest   { stroke:#16a34a; }
+    .edge-mcp    { stroke:#d97706; }
+    .edge-sql    { stroke:#cc2936; stroke-dasharray:4 3; }
+    .edge-ai     { stroke:#0ea5e9; stroke-dasharray:2 3; }
+    .edge-write  { stroke:#a9b3d6; stroke-dasharray:6 3; }
+    .edge-label  { fill:#e8ecf8; font-size:13px; font-weight:600; font-family:'Segoe UI', system-ui, sans-serif; }
+    .pill { fill:#0b1020; stroke:#2a3360; stroke-width:1; }
+  </style>
+  <defs>
+    <marker id="arr-rest" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a" /></marker>
+    <marker id="arr-mcp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d97706" /></marker>
+    <marker id="arr-sql" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#cc2936" /></marker>
+    <marker id="arr-ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0ea5e9" /></marker>
+    <marker id="arr-write" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#a9b3d6" /></marker>
+  </defs>
+
+  <!-- background -->
+  <rect x="0" y="-14.375" width="1260" height="708.75" fill="#0b1020"/>
+
+  <!-- page title -->
+  <text x="40" y="4" fill="#e8ecf8" font-weight="700" font-size="18" font-family="'Segoe UI', system-ui, sans-serif">Zava Live Site Support — Architecture (Azure)</text>
+  <text x="40" y="22" fill="#a9b3d6" font-size="12" font-family="'Segoe UI', system-ui, sans-serif">Same app · same DAB · same proc body · Hyperscale + APIM + AOAI · all MI, zero keys</text>
+
+  <!-- Left: clients -->
+  <rect class="box box-browser" x="40" y="80" width="240" height="100" rx="10" ry="10"/>
+  <text class="label-title"  x="60" y="112">Zava On-Call app</text>
+  <text class="label-sub"    x="60" y="132">Azure Static Web App</text>
+  <text class="label-mono-d" x="60" y="158">zava-web-*</text>
+
+  <rect class="box box-agent" x="40" y="240" width="240" height="100" rx="10" ry="10"/>
+  <text class="label-title"  x="60" y="272">Copilot agent</text>
+  <text class="label-sub"    x="60" y="292">VS Code · agent mode</text>
+  <text class="label-mono-d" x="60" y="318">same six MCP tools</text>
+  <text class="label-mono-d" x="40" y="360">.github/skills/live-site-sql/SKILL.md</text>
+
+  <!-- Middle: DAB in Azure Container Apps -->
+  <rect class="box box-dab" x="320" y="100" width="280" height="240" rx="10" ry="10"/>
+  <text class="label-title"  x="340" y="124">Data API builder</text>
+  <text class="label-title"  x="340" y="144">SQL MCP Server</text>
+  <text class="label-sub"    x="340" y="162">Azure Container App · system MI</text>
+  <rect class="pill" x="340" y="170" width="240" height="44" rx="12" ry="12"/>
+  <text class="label-mono"   x="354" y="190">/api</text>
+  <text class="label-mono-d" x="354" y="206">Incident</text>
+  <rect class="pill" x="340" y="222" width="240" height="106" rx="12" ry="12"/>
+  <text class="label-mono"   x="354" y="242">/mcp</text>
+  <text class="label-mono-d" x="354" y="260">read_records · hybrid_search</text>
+  <text class="label-mono-d" x="354" y="278">dx_index_exists</text>
+  <text class="label-mono-d" x="354" y="294">dx_resource_pressure</text>
+  <text class="label-mono-d" x="354" y="310">dx_deadlock_recent</text>
+  <text class="label-mono-d" x="354" y="324">generate_mitigation</text>
+
+  <!-- Hyperscale -->
+  <rect class="box box-sql" x="640" y="60" width="280" height="398" rx="10" ry="10"/>
+  <text class="label-title"  x="660" y="92">Azure SQL Hyperscale</text>
+  <text class="label-sub"    x="660" y="110">zavasqlserver-*.database.windows.net</text>
+  <text class="label-mono-d" x="660" y="128">zavalivesitedb · system MI</text>
+
+  <rect class="pill" x="660" y="142" width="240" height="78" rx="12" ry="12"/>
+  <text class="label-mono"   x="674" y="162">CORPUS</text>
+  <text class="label-mono-d" x="674" y="180">Incident · Archive · Runbook</text>
+  <text class="label-mono-d" x="674" y="198">vector(1536) · JSON · DiskANN</text>
+
+  <rect class="pill" x="660" y="230" width="240" height="60" rx="12" ry="12"/>
+  <text class="label-mono"   x="674" y="250">EXTERNAL MODEL</text>
+  <text class="label-mono-d" x="674" y="268">AoaiTextEmbed3Small</text>
+  <text class="label-mono-d" x="674" y="284">→ embeddings via AOAI</text>
+
+  <rect class="pill" x="660" y="300" width="240" height="60" rx="12" ry="12"/>
+  <text class="label-mono"   x="674" y="320">LEDGER</text>
+  <text class="label-mono-d" x="674" y="338">AppLog · append-only · Merkle</text>
+  <text class="label-mono-d" x="674" y="354">composer + dx_deadlock_recent</text>
+
+  <rect class="pill" x="660" y="370" width="240" height="80" rx="12" ry="12"/>
+  <text class="label-mono"   x="674" y="390">COMPOSER</text>
+  <text class="label-mono-d" x="674" y="408">usp_GenerateMitigation</text>
+  <text class="label-mono-d" x="674" y="424">→ usp_HybridSearch · embed</text>
+  <text class="label-mono-d" x="674" y="442">→ sp_invoke chat → APIM</text>
+
+  <!-- AOAI (top of right column) -->
+  <rect class="box box-ai" x="960" y="80" width="260" height="270" rx="10" ry="10"/>
+  <text class="label-title"  x="980" y="108">Azure OpenAI</text>
+  <text class="label-sub"    x="980" y="126">zava-aoai-*.openai.azure.com</text>
+  <rect class="pill" x="980" y="138" width="220" height="68" rx="12" ry="12"/>
+  <text class="label-mono"   x="994" y="158">text-embedding-3-small</text>
+  <text class="label-mono-d" x="994" y="176">vector(1536) · Standard</text>
+  <text class="label-mono-d" x="994" y="192">EXTERNAL MODEL target</text>
+  <rect class="pill" x="980" y="216" width="220" height="66" rx="12" ry="12"/>
+  <text class="label-mono"   x="994" y="236">gpt-5-4-mini</text>
+  <text class="label-mono-d" x="994" y="254">GlobalStandard · reasoning</text>
+  <text class="label-mono-d" x="994" y="270">sp_invoke target (via APIM)</text>
+
+  <!-- APIM (middle of right column) -->
+  <rect class="box box-apim" x="960" y="380" width="260" height="180" rx="10" ry="10"/>
+  <text class="label-title"  x="980" y="408">APIM · GenAI gateway</text>
+  <text class="label-sub"    x="980" y="426">zava-apim-*.azure-api.net</text>
+  <rect class="pill" x="980" y="438" width="220" height="116" rx="12" ry="12"/>
+  <text class="label-mono"   x="994" y="458">inbound policies</text>
+  <text class="label-mono-d" x="994" y="474">auth-managed-identity</text>
+  <text class="label-mono-d" x="994" y="490">llm-content-safety</text>
+  <text class="label-mono-d" x="994" y="506">llm-token-limit · 500 TPM</text>
+  <text class="label-mono-d" x="994" y="522">llm-emit-token-metric</text>
+  <text class="label-mono-d" x="994" y="544">SQL bearer → MI (always)</text>
+
+  <!-- Content Safety (bottom of right column) -->
+  <rect class="box box-ai" x="960" y="582" width="260" height="48" rx="10" ry="10"/>
+  <text class="label-mono"   x="980" y="604">Azure Content Safety</text>
+  <text class="label-mono-d" x="980" y="622">zava-cs-* · MI from APIM</text>
+
+  <!-- Edges -->
+  <path class="edge edge-rest" d="M280,130 C300,130 310,192 320,192" marker-end="url(#arr-rest)"/>
+  <text class="edge-label" x="290" y="122" fill="#16a34a">REST</text>
+
+  <path class="edge edge-mcp" d="M280,290 C300,290 310,275 320,275" marker-end="url(#arr-mcp)"/>
+  <text class="edge-label" x="290" y="266" fill="#d97706">MCP</text>
+
+  <path class="edge edge-sql" d="M600,220 C620,220 630,180 640,180" marker-end="url(#arr-sql)"/>
+  <text class="edge-label" x="610" y="172" fill="#cc2936">TDS</text>
+
+  <path class="edge edge-write" d="M660,400 C620,400 600,180 660,180" marker-end="url(#arr-write)"/>
+  <path class="edge edge-write" d="M660,400 C630,400 630,330 660,330" marker-end="url(#arr-write)"/>
+  <text class="edge-label" x="540" y="394" fill="#a9b3d6">write-back</text>
+
+  <path class="edge edge-ai" d="M920,260 C940,260 940,172 960,172" marker-end="url(#arr-ai)"/>
+  <path class="edge edge-ai" d="M920,400 C940,400 940,460 960,460" marker-end="url(#arr-ai)"/>
+  <path class="edge edge-ai" d="M1090,380 L1090,284" marker-end="url(#arr-ai)"/>
+  <path class="edge edge-ai" d="M1090,560 L1090,582" marker-end="url(#arr-ai)"/>
+
+  <text class="badge" x="640" y="50" fill="#e8ecf8">SAME PROC BODY · ALL MI · ZERO KEYS</text>
+</svg>
