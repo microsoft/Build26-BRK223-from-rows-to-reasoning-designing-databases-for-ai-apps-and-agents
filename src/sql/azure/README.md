@@ -65,8 +65,18 @@ azure/
 
 ## Deploy
 
+Before the first `-ReDeploy` run, export the three values Bicep needs.
+The checked-in `bicep/params.json` has empty placeholders for these on
+purpose — `Prep-Cloud.ps1` passes them as `-p name=value` overrides so
+no PII lands in source.
+
 ```powershell
-.\Prep-Cloud.ps1   # idempotent end-to-end
+$env:BRK223_PUBLISHER_EMAIL         = '<upn for APIM publisher email>'
+$env:BRK223_SQL_AAD_ADMIN_LOGIN     = '<aad admin UPN>'
+$env:BRK223_SQL_AAD_ADMIN_OBJECT_ID = '<aad admin object id>'
+
+.\Prep-Cloud.ps1 -ReDeploy   # first run only; re-runs Bicep then everything else
+.\Prep-Cloud.ps1             # subsequent runs reuse the existing deployment
 ```
 
 Probes existing resources, only creates what's missing, then deploys

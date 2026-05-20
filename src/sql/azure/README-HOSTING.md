@@ -35,9 +35,15 @@ Prep-Cloud-Hosting.ps1    ← THIS folder: ACR + ACA DAB + SWA (Blazor)
 
 Run them in order on a fresh subscription. Both are idempotent.
 
+`Prep-Cloud.ps1 -ReDeploy` requires three env vars (no defaults in source):
+
 ```powershell
+$env:BRK223_PUBLISHER_EMAIL         = '<upn for APIM publisher email>'
+$env:BRK223_SQL_AAD_ADMIN_LOGIN     = '<aad admin UPN>'
+$env:BRK223_SQL_AAD_ADMIN_OBJECT_ID = '<aad admin object id>'
+
 cd presentations\build2026\BRK223\sql\azure
-.\Prep-Cloud.ps1                # ~15-20 min on a cold subscription
+.\Prep-Cloud.ps1 -ReDeploy      # ~15-20 min on a cold subscription
 .\Prep-Cloud-Hosting.ps1        # ~5-7 min once ACR is warm
 ```
 

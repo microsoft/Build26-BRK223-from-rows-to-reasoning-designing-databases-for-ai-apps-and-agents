@@ -452,6 +452,29 @@ For the composed-plan demo to be reliable, `01_schema.sql` must:
 
 DAB runs as a container managed by the Aspire AppHost (`dotnet/AppHost/apphost.cs` — pinned to host port **8765** via `WithHttpEndpoint(port: 8765, targetPort: 5000)`). VS Code Copilot Chat connects over HTTP; it is **not** spawning DAB as a subprocess. `runtime.mcp.enabled = true` in `dab-config.json`. Permissions use role `anonymous` (the proxy is loopback-only — `127.0.0.1:8765`).
 
+## Per-shell environment variables (set these first, every new pwsh window)
+
+The local and cloud scripts deliberately have **no password defaults** —
+they read these from `$env:*` and fail fast with a clear error if any
+are missing. Put them in your shell profile or paste them at the top of
+every new pwsh window before running anything below.
+
+```powershell
+# --- local (laptop) demo -------------------------------------------------
+$env:BRK223_SQL_IMAGE         = 'mcr.microsoft.com/mssql/server:2025-latest'  # or the internal preview image
+$env:BRK223_SA_PASSWORD       = '<sa password>'
+$env:BRK223_SQLADMIN_PASSWORD = '<sqladmin password>'
+$env:BRK223_SQL_CONNECTION_STRING = "Server=host.docker.internal,14330;Database=zavalivesitedb;User Id=sqladmin;Password=$env:BRK223_SQLADMIN_PASSWORD;TrustServerCertificate=True;Encrypt=True;Command Timeout=180"
+
+# --- cloud (Beat 5 / Prep-Cloud.ps1 -ReDeploy only) ---------------------
+$env:BRK223_PUBLISHER_EMAIL         = '<upn for APIM publisher email>'
+$env:BRK223_SQL_AAD_ADMIN_LOGIN     = '<aad admin UPN>'
+$env:BRK223_SQL_AAD_ADMIN_OBJECT_ID = '<aad admin object id>'
+```
+
+If a script aborts with `... required. Pass -X or set $env:BRK223_...`,
+you forgot to set one of these in this shell.
+
 ## If the laptop reboots (rehearsal or stage)
 
 Everything is already pre-staged on disk and inside the SQL container. You

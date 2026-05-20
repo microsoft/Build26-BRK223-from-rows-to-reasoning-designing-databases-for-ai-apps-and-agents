@@ -95,6 +95,18 @@ These files have been validated end-to-end (Build → Verify → Start → Inser
   `mcr.microsoft.com/mssql/server:2025-latest` is the documented public
   alternative.
 
+- **Credentials / PII via env vars (no defaults in source).** The scripts
+  fail fast with a clear error if any of these are unset:
+
+  | Env var | Used by |
+  |---|---|
+  | `BRK223_SA_PASSWORD` | Container SA password — `Build.ps1`, `Start-AzureSqlContainer.ps1`, `Verify-Build.ps1`, `Test-AzureSqlConnection.ps1`, `Prep-Demo.ps1` |
+  | `BRK223_SQLADMIN_PASSWORD` | App login `sqladmin` — `deploy-prestage.ps1`, `Generate-Mitigation.ps1`, `Insert-Incident.ps1`, `Reset-Incident.ps1`, `Reset-ForBeat2.ps1` |
+  | `BRK223_SQL_CONNECTION_STRING` | Aspire `apphost.cs` AppHost (DAB connection) |
+  | `BRK223_PUBLISHER_EMAIL` | `Prep-Cloud.ps1 -ReDeploy` (APIM `publisherEmail`) |
+  | `BRK223_SQL_AAD_ADMIN_LOGIN` | `Prep-Cloud.ps1 -ReDeploy` (SQL AAD admin UPN) |
+  | `BRK223_SQL_AAD_ADMIN_OBJECT_ID` | `Prep-Cloud.ps1 -ReDeploy` (SQL AAD admin object id) |
+
 **Ports and wiring** (changing any of these means updating every consumer):
 
 | Port | Service | Set in |
@@ -112,6 +124,9 @@ all three.
 
 - `src/sql/azure/bicep/*.json` — compiled ARM, referenced by
   `Prep-Cloud.ps1 -p @params.json`. Keep next to the `.bicep` sources.
+  `params.json` ships with empty placeholders for `publisherEmail`,
+  `sqlAadAdminLogin`, `sqlAadAdminObjectId`; `Prep-Cloud.ps1` injects the
+  real values via `-p name=value` from the `BRK223_*` env vars above.
 - `src/sql/local/utilities/sqlsim.exe` — checked-in binary the demo
   depends on. Keep.
 - `src/sql/local/sqlscripts/_bootstrap_login.sql`,

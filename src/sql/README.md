@@ -186,7 +186,7 @@ Scripts are PowerShell unless noted. Run them from `src/sql/local/`.
 
 | Purpose | Files |
 |---|---|
-| **Data tier (Beats 1–4 minimum)** | [`Prep-Cloud.ps1`](azure/Prep-Cloud.ps1) — deploy Hyperscale + Azure OpenAI + APIM via [`bicep/main.bicep`](azure/bicep/main.bicep), then apply [`sqlscripts/`](azure/sqlscripts/) (cloud variant of the local deploy — Azure OpenAI as the external model, APIM as the proxy). Parameters live in [`bicep/params.json`](azure/bicep/params.json). |
+| **Data tier (Beats 1–4 minimum)** | [`Prep-Cloud.ps1`](azure/Prep-Cloud.ps1) — deploy Hyperscale + Azure OpenAI + APIM via [`bicep/main.bicep`](azure/bicep/main.bicep), then apply [`sqlscripts/`](azure/sqlscripts/) (cloud variant of the local deploy — Azure OpenAI as the external model, APIM as the proxy). [`bicep/params.json`](azure/bicep/params.json) holds non-secret parameter slots; the secret/PII values (APIM publisher email, SQL AAD admin UPN + object id) are read from `BRK223_PUBLISHER_EMAIL`, `BRK223_SQL_AAD_ADMIN_LOGIN`, `BRK223_SQL_AAD_ADMIN_OBJECT_ID` env vars at deploy time. |
 | **App tier (optional)** | [`Prep-Cloud-Hosting.ps1`](azure/Prep-Cloud-Hosting.ps1) — adds Container Apps hosting for the Blazor + DAB layer via [`bicep/hosting.bicep`](azure/bicep/hosting.bicep). [`README-HOSTING.md`](azure/README-HOSTING.md) — what this layer does and why it's separate. [`hosting/`](azure/hosting/) — DAB Dockerfile, cloud DAB config, MCP server descriptor, and SQL grant for the managed identity. |
 | **APIM policy** | [`apim-policies/aoai-api.xml`](azure/apim-policies/aoai-api.xml) — the inbound policy that fronts Azure OpenAI (auth, rate limit, model routing). |
 | **Reset / teardown** | [`Reset-Stack.ps1`](azure/Reset-Stack.ps1) — rewind cloud state for another rehearsal. [`Cleanup-Cloud.ps1`](azure/Cleanup-Cloud.ps1) — delete data-tier resources. [`Teardown-Cloud-Hosting.ps1`](azure/Teardown-Cloud-Hosting.ps1) — delete app-tier resources. |
@@ -332,6 +332,18 @@ cd src/sql/local
 # Public path:
 $env:BRK223_SQL_IMAGE = 'mcr.microsoft.com/mssql/server:2025-latest'
 # (Microsoft-internal Azure SQL preview path goes here instead, if you have access.)
+
+# Required — no defaults. Used by Build.ps1, deploy-prestage.ps1,
+# Start-AzureSqlContainer.ps1, Generate-Mitigation.ps1, Insert-Incident.ps1,
+# Reset-Incident.ps1, Reset-ForBeat2.ps1, Verify-Build.ps1,
+# Test-AzureSqlConnection.ps1, Prep-Demo.ps1. Pick strong values — no demo
+# defaults are baked into the scripts.
+$env:BRK223_SA_PASSWORD       = '<sa password>'           # SQL container SA
+$env:BRK223_SQLADMIN_PASSWORD = '<sqladmin password>'     # app login the demo uses
+
+# Required by the Aspire AppHost (dotnet run apphost.cs) and Start-LiveSite.ps1.
+# Must match the sqladmin password above.
+$env:BRK223_SQL_CONNECTION_STRING = "Server=host.docker.internal,14330;Database=zavalivesitedb;User Id=sqladmin;Password=$env:BRK223_SQLADMIN_PASSWORD;TrustServerCertificate=True;Encrypt=True;Command Timeout=180"
 
 .\Build.ps1
 # Cold run: ~12-15 min (image pull + Ollama model pull + corpus embed + dotnet build)
