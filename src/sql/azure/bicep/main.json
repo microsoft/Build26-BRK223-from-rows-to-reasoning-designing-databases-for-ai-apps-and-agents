@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "7772596056652462969"
+      "templateHash": "8541566646190211642"
     }
   },
   "parameters": {
@@ -33,6 +33,19 @@
       "type": "string",
       "metadata": {
         "description": "AAD principal login (UPN) for display."
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "metadata": {
+        "description": "APIM publisher email (required by ApiManagement service)."
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "defaultValue": "BRK223 Demo",
+      "metadata": {
+        "description": "APIM publisher name displayed in the developer portal."
       }
     },
     "chatDeploymentName": {
@@ -93,9 +106,9 @@
     },
     "sqlServerName": {
       "type": "string",
-      "defaultValue": "zavasqlserver",
+      "defaultValue": "[format('zavasqlserver-{0}', parameters('nameSuffix'))]",
       "metadata": {
-        "description": "SQL logical server name. Default: zavasqlserver. Must be globally unique."
+        "description": "SQL logical server name. Must be globally unique."
       }
     },
     "sqlDatabaseName": {
@@ -546,6 +559,12 @@
           },
           "chatDeploymentName": {
             "value": "[parameters('chatDeploymentName')]"
+          },
+          "publisherEmail": {
+            "value": "[parameters('publisherEmail')]"
+          },
+          "publisherName": {
+            "value": "[parameters('publisherName')]"
           }
         },
         "template": {
@@ -555,7 +574,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16818136705249258445"
+              "templateHash": "11479317739943833652"
             }
           },
           "parameters": {
@@ -573,6 +592,13 @@
             },
             "chatDeploymentName": {
               "type": "string"
+            },
+            "publisherEmail": {
+              "type": "string"
+            },
+            "publisherName": {
+              "type": "string",
+              "defaultValue": "BRK223 Demo"
             }
           },
           "variables": {
@@ -592,8 +618,8 @@
                 "type": "SystemAssigned"
               },
               "properties": {
-                "publisherName": "BRK223 Demo",
-                "publisherEmail": "bobward@microsoft.com",
+                "publisherName": "[parameters('publisherName')]",
+                "publisherEmail": "[parameters('publisherEmail')]",
                 "virtualNetworkType": "None"
               }
             },

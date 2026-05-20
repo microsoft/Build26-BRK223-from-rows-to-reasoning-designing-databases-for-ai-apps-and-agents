@@ -19,7 +19,7 @@
     Default: sqladmin
 
 .PARAMETER Password
-    Default: StrongPassw0rd
+    Default: value of $env:BRK223_SQLADMIN_PASSWORD. Required.
 
 .EXAMPLE
     .\Reset-ForBeat2.ps1
@@ -28,10 +28,14 @@
 param(
     [string]$Server   = 'localhost,14330',
     [string]$User     = 'sqladmin',
-    [string]$Password = 'StrongPassw0rd'
+    [string]$Password = $env:BRK223_SQLADMIN_PASSWORD
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrEmpty($Password)) {
+    throw 'Password required. Pass -Password or set $env:BRK223_SQLADMIN_PASSWORD.'
+}
 
 . (Join-Path $PSScriptRoot 'Common.ps1')
 

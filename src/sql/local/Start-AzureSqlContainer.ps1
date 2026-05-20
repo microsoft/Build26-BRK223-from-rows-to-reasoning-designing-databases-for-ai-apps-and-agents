@@ -37,7 +37,8 @@
     Host port to bind 1433 to. Default: 1433.
 
 .PARAMETER SaPassword
-    SA password. Default: Password1 (test-only).
+    SA password for the container.
+    Default: value of $env:BRK223_SA_PASSWORD. Required.
 
 .PARAMETER Gpu
     GPU mode for the Ollama-in-container path. One of:
@@ -66,12 +67,16 @@ param(
     [string]$Image = '',
     [string]$ContainerName = 'azsql-zavalivesite',
     [int]$Port = 1433,
-    [string]$SaPassword = 'Password1',
+    [string]$SaPassword = $env:BRK223_SA_PASSWORD,
     [ValidateSet('auto','on','off')]
     [string]$Gpu = 'auto'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrEmpty($SaPassword)) {
+    throw 'SaPassword required. Pass -SaPassword or set $env:BRK223_SA_PASSWORD.'
+}
 
 # --- Resolve image (param > env var > error) ---------------------------------
 if (-not $Image) { $Image = $env:BRK223_SQL_IMAGE }

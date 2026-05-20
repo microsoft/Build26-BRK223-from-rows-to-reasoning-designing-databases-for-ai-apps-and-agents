@@ -14,7 +14,7 @@
     06_hybrid_search.sql                  ← Beat 2 (composed plan: vector + JSON)
     07_log_timeline.sql                   ← Beat 3 (parquet — optional)
 
-  Connection: localhost,1434  /  sa  /  Password1  /  TrustServerCertificate=Yes
+  Connection: localhost,1434  /  sa  /  <SA password from env>  /  TrustServerCertificate=Yes
 ============================================================================*/
 USE master;
 GO

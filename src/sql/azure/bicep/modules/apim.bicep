@@ -10,6 +10,8 @@ param apimName string
 param aoaiEndpoint string
 param csEndpoint string
 param chatDeploymentName string
+param publisherEmail string
+param publisherName string = 'BRK223 Demo'
 
 resource apim 'Microsoft.ApiManagement/service@2024-05-01' = {
   name: apimName
@@ -20,8 +22,8 @@ resource apim 'Microsoft.ApiManagement/service@2024-05-01' = {
   }
   identity: { type: 'SystemAssigned' }
   properties: {
-    publisherName: 'BRK223 Demo'
-    publisherEmail: 'bobward@microsoft.com'
+    publisherName: publisherName
+    publisherEmail: publisherEmail
     virtualNetworkType: 'None'
   }
 }

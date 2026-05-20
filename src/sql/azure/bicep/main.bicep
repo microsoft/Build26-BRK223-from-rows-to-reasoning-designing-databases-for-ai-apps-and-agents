@@ -19,6 +19,12 @@ param sqlAadAdminObjectId string
 @description('AAD principal login (UPN) for display.')
 param sqlAadAdminLogin string
 
+@description('APIM publisher email (required by ApiManagement service).')
+param publisherEmail string
+
+@description('APIM publisher name displayed in the developer portal.')
+param publisherName string = 'BRK223 Demo'
+
 @description('AOAI chat deployment name. Cannot contain dots.')
 param chatDeploymentName string = 'gpt-5-4-mini'
 
@@ -108,6 +114,8 @@ module apim 'modules/apim.bicep' = {
     aoaiEndpoint: openai.outputs.endpoint
     csEndpoint: cs.outputs.endpoint
     chatDeploymentName: chatDeploymentName
+    publisherEmail: publisherEmail
+    publisherName: publisherName
   }
 }
 

@@ -1,12 +1,10 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json",
+  "contentVersion": "1.0.0.0",
+  "_comment": "Values are intentionally empty. Prep-Cloud.ps1 supplies them at deploy time from env vars BRK223_SQL_AAD_ADMIN_OBJECT_ID, BRK223_SQL_AAD_ADMIN_LOGIN, BRK223_PUBLISHER_EMAIL. Do NOT commit real values here.",
   "parameters": {
-    "sqlAadAdminObjectId": {
-      "value": "6da7c2dd-8e2e-469f-a216-c384312e2a2d"
-    },
-    "sqlAadAdminLogin": {
-      "value": "bobward@microsoft.com"
-    }
-  },
-  "contentVersion": "1.0.0.0"
+    "sqlAadAdminObjectId": { "value": "" },
+    "sqlAadAdminLogin":    { "value": "" },
+    "publisherEmail":      { "value": "" }
+  }
 }

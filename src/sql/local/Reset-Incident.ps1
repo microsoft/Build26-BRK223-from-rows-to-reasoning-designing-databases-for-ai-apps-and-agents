@@ -8,8 +8,12 @@ param(
     [string]$ServerInstance = 'localhost,14330',
     [string]$Database       = 'zavalivesitedb',
     [string]$User           = 'sqladmin',
-    [string]$Password       = 'StrongPassw0rd'
+    [string]$Password       = $env:BRK223_SQLADMIN_PASSWORD
 )
+
+if ([string]::IsNullOrEmpty($Password)) {
+    throw 'Password required. Pass -Password or set $env:BRK223_SQLADMIN_PASSWORD.'
+}
 
 . (Join-Path $PSScriptRoot 'Common.ps1')
 $sqlsim = Get-Sqlsim
