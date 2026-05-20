@@ -10,7 +10,8 @@
     Host port to connect to. Default: 1433.
 
 .PARAMETER SaPassword
-    SA password. Default: Password1.
+    SA password.
+    Default: value of $env:BRK223_SA_PASSWORD. Required.
 
 .PARAMETER TimeoutSeconds
     How long to wait for SQL to become ready. Default: 120.
@@ -25,12 +26,16 @@
 [CmdletBinding()]
 param(
     [int]$Port = 1433,
-    [string]$SaPassword = 'Password1',
+    [string]$SaPassword = $env:BRK223_SA_PASSWORD,
     [int]$TimeoutSeconds = 120,
     [string]$ContainerName = 'azsql-zavalivesite'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrEmpty($SaPassword)) {
+    throw 'SaPassword required. Pass -SaPassword or set $env:BRK223_SA_PASSWORD.'
+}
 
 . (Join-Path $PSScriptRoot 'Common.ps1')
 

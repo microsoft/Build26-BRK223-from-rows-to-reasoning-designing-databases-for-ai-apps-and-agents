@@ -41,7 +41,8 @@
     Host port for SQL. Default: 14330.
 
 .PARAMETER SaPassword
-    SA password. Default: Password1.
+    SA password.
+    Default: value of $env:BRK223_SA_PASSWORD. Required.
 
 .PARAMETER SkipVerify
     Skip step 1 (Verify-Build.ps1). Use only when you just ran it.
@@ -76,7 +77,7 @@
 param(
     [string]$ContainerName = 'azsql-zavalivesite',
     [int]   $SqlPort       = 14330,
-    [string]$SaPassword    = 'Password1',
+    [string]$SaPassword    = $env:BRK223_SA_PASSWORD,
     [switch]$SkipVerify,
     [switch]$SkipReset,
     [switch]$SkipWarmup,
@@ -86,6 +87,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+
+if ([string]::IsNullOrEmpty($SaPassword)) {
+    throw 'SaPassword required. Pass -SaPassword or set $env:BRK223_SA_PASSWORD.'
+}
 
 function Write-Step  { param($n,$m) Write-Host "`n=== Step $n - $m ===" -ForegroundColor Cyan }
 function Write-Ok    { param($m)   Write-Host "  [OK]   $m" -ForegroundColor Green }

@@ -59,6 +59,7 @@ function Invoke-SqlsimScript {
         [string]$Database = 'master',
         [int]$LoginTimeoutSeconds = 30,
         [int]$QueryTimeoutSeconds = 0,
+        [hashtable]$SqlcmdVariables,
         [switch]$PassThruExitCode
     )
     if (-not (Test-Path -LiteralPath $Path)) { throw "Script not found: $Path" }
@@ -67,6 +68,15 @@ function Invoke-SqlsimScript {
     $tmp = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.sql')
     try {
         $body = (Get-BRK223SetPreamble) + "`r`n" + (Get-Content -Raw -LiteralPath $Path)
+        if ($SqlcmdVariables) {
+            # Substitute $(Name) tokens in the script body. sqlsim does not
+            # currently accept -v sqlcmd variables, so we do it in-process.
+            foreach ($k in $SqlcmdVariables.Keys) {
+                $token   = '$(' + $k + ')'
+                $literal = [regex]::Escape($token)
+                $body    = $body -replace $literal, [string]$SqlcmdVariables[$k]
+            }
+        }
         Set-Content -LiteralPath $tmp -Value $body -Encoding UTF8 -NoNewline
 
         $sqlsimArgs = @('-S', $Server, '-d', $Database, '-U', $User, '-P', $Password,

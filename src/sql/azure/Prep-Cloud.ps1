@@ -259,12 +259,32 @@ Write-Step 1 'Resolve Bicep deployment outputs'
 
 if ($ReDeploy) {
     $bicepDir = Join-Path $PSScriptRoot 'bicep'
+
+    # Required deploy-time values come from env vars so no PII / object ids
+    # land in source control.
+    $publisherEmail = $env:BRK223_PUBLISHER_EMAIL
+    $aadAdminLogin  = $env:BRK223_SQL_AAD_ADMIN_LOGIN
+    $aadAdminOid    = $env:BRK223_SQL_AAD_ADMIN_OBJECT_ID
+
+    if ([string]::IsNullOrEmpty($publisherEmail)) {
+        throw 'Set $env:BRK223_PUBLISHER_EMAIL before -ReDeploy (APIM publisherEmail).'
+    }
+    if ([string]::IsNullOrEmpty($aadAdminLogin)) {
+        throw 'Set $env:BRK223_SQL_AAD_ADMIN_LOGIN before -ReDeploy (UPN of SQL AAD admin).'
+    }
+    if ([string]::IsNullOrEmpty($aadAdminOid)) {
+        throw 'Set $env:BRK223_SQL_AAD_ADMIN_OBJECT_ID before -ReDeploy (object id of SQL AAD admin).'
+    }
+
     Write-Info "Running az deployment group create (-ReDeploy)..."
     & az deployment group create `
         -g $ResourceGroup `
         -n $DeploymentName `
         -f (Join-Path $bicepDir 'main.bicep') `
         -p "@$(Join-Path $bicepDir 'params.json')" `
+        -p "publisherEmail=$publisherEmail" `
+        -p "sqlAadAdminLogin=$aadAdminLogin" `
+        -p "sqlAadAdminObjectId=$aadAdminOid" `
         --only-show-errors `
         -o none
     if ($LASTEXITCODE -ne 0) { throw "az deployment group create exited $LASTEXITCODE" }

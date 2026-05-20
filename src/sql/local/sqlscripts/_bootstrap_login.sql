@@ -10,8 +10,12 @@
   This file is intentionally NOT numbered so it doesn't appear in the
   on-stage script flow. It is a deployment prerequisite, not part of the demo.
 
-  Connection: localhost,1434  /  sa  /  Password1  /  TrustServerCertificate=Yes
+  Connection: localhost,1434  /  sa  /  <SA password from env>  /  TrustServerCertificate=Yes
   Idempotent: safe to re-run.
+
+  Expects a sqlcmd-style variable $(SqlAdminPassword) to be substituted in
+  before execution. deploy-prestage.ps1 passes this via
+  Invoke-SqlsimScript -SqlcmdVariables @{ SqlAdminPassword = $SqlAdminPassword }.
 ============================================================================*/
 USE master;
 GO
@@ -19,12 +23,12 @@ GO
 IF SUSER_ID(N'sqladmin') IS NULL
 BEGIN
     PRINT '>>> Creating login sqladmin...';
-    CREATE LOGIN sqladmin WITH PASSWORD = 'StrongPassw0rd', CHECK_POLICY = OFF;
+    CREATE LOGIN sqladmin WITH PASSWORD = '$(SqlAdminPassword)', CHECK_POLICY = OFF;
 END
 ELSE
 BEGIN
     PRINT '>>> Login sqladmin already exists; resetting password.';
-    ALTER LOGIN sqladmin WITH PASSWORD = 'StrongPassw0rd';
+    ALTER LOGIN sqladmin WITH PASSWORD = '$(SqlAdminPassword)';
     ALTER LOGIN sqladmin ENABLE;
 END
 GO
@@ -36,5 +40,5 @@ BEGIN
 END
 GO
 
-PRINT '>>> Bootstrap complete. Use sqladmin / StrongPassw0rd for all subsequent scripts.';
+PRINT '>>> Bootstrap complete. Use sqladmin for all subsequent scripts.';
 GO

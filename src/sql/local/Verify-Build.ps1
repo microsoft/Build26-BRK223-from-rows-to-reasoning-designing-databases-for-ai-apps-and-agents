@@ -28,7 +28,8 @@
     Host port for SQL. Default: 14330.
 
 .PARAMETER SaPassword
-    SA password. Default: Password1.
+    SA password.
+    Default: value of $env:BRK223_SA_PASSWORD. Required.
 
 .PARAMETER SkipAi
     Skip ollama/caddy checks (steps 4 + 5). Use when you only need SQL.
@@ -40,12 +41,16 @@
 param(
     [string]$ContainerName = 'azsql-zavalivesite',
     [int]$SqlPort          = 14330,
-    [string]$SaPassword    = 'Password1',
+    [string]$SaPassword    = $env:BRK223_SA_PASSWORD,
     [switch]$SkipAi
 )
 
 $ErrorActionPreference = 'Stop'
 $script:Failed = @()
+
+if ([string]::IsNullOrEmpty($SaPassword)) {
+    throw 'SaPassword required. Pass -SaPassword or set $env:BRK223_SA_PASSWORD.'
+}
 
 . (Join-Path $PSScriptRoot 'Common.ps1')
 

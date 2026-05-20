@@ -3,11 +3,11 @@
   <rect width="1920" height="1080" fill="#FAFAFA"/>
 
   <!-- Title -->
-  <text x="96" y="110" font-size="64" font-weight="700" fill="#243A5E">The Zava on-call engineer's problem</text>
-  <text x="96" y="170" font-size="34" font-weight="400" fill="#605E5C">Operational data, the runbooks that explain it, and the AI that could reason over it — all live in different worlds.</text>
+  <text x="96" y="70" font-size="64" font-weight="700" fill="#243A5E">The Zava on-call engineer's problem</text>
+  <text x="96" y="125" font-size="34" font-weight="400" fill="#605E5C">Operational data, the runbooks that explain it, and the AI that could reason over it — all live in different worlds.</text>
 
   <!-- Decorative divider -->
-  <line x1="96" y1="200" x2="1824" y2="200" stroke="#E1DFDD" stroke-width="2"/>
+  <line x1="96" y1="155" x2="1824" y2="155" stroke="#E1DFDD" stroke-width="2"/>
 
   <!-- Center: incident / engineer / question -->
   <g transform="translate(960,560)">
@@ -78,6 +78,15 @@
   </defs>
 
   <!-- Friction labels removed per request -->
+
+  <!-- Developer callout: offline-first, Azure-ready -->
+  <g transform="translate(960,217)">
+    <rect x="-500" y="-34" width="1000" height="68" rx="34" fill="#FFF4CE" stroke="#D29200" stroke-width="2"/>
+    <circle cx="-460" cy="0" r="18" fill="#D29200"/>
+    <text x="-460" y="7" text-anchor="middle" font-size="22" font-weight="700" fill="#FFFFFF">!</text>
+    <text x="-428" y="-6" font-size="14" font-weight="700" fill="#8A6100" letter-spacing="2">DEVELOPER REALITY</text>
+    <text x="-428" y="20" font-size="22" font-weight="600" fill="#243A5E">Build the whole stack offline on a laptop — move to Azure with few changes.</text>
+  </g>
 
   <!-- Bottom pivot banner -->
   <rect x="96" y="980" width="1728" height="76" rx="10" fill="#243A5E"/>

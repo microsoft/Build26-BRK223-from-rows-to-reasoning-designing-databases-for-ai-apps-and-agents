@@ -47,11 +47,12 @@
     Host port for SQL. Default: 14330 (avoids Windows MSSQLSERVER DAC on 1434).
 
 .PARAMETER SaPassword
-    SA password for the container. Default: Password1 (test-only).
+    SA password for the container.
+    Default: value of $env:BRK223_SA_PASSWORD. Required.
 
 .PARAMETER SqlAdminPassword
     Password for the sqladmin login deploy-prestage.ps1 creates.
-    Default: StrongPassw0rd.
+    Default: value of $env:BRK223_SQLADMIN_PASSWORD. Required.
 
 .PARAMETER SqlImage
     SQL container image to pull. No built-in default. Resolution order:
@@ -123,8 +124,8 @@
 param(
     [string]$ContainerName    = 'azsql-zavalivesite',
     [int]$SqlPort             = 14330,
-    [string]$SaPassword       = 'Password1',
-    [string]$SqlAdminPassword = 'StrongPassw0rd',
+    [string]$SaPassword       = $env:BRK223_SA_PASSWORD,
+    [string]$SqlAdminPassword = $env:BRK223_SQLADMIN_PASSWORD,
     [string]$SqlImage         = '',
     [string]$DabImage         = 'mcr.microsoft.com/azure-databases/data-api-builder:2.0.0-rc',
     [switch]$SkipWinget,
@@ -139,6 +140,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $script:Failed = @()
+
+if ([string]::IsNullOrEmpty($SaPassword)) {
+    throw 'SaPassword required. Pass -SaPassword or set $env:BRK223_SA_PASSWORD.'
+}
+if ([string]::IsNullOrEmpty($SqlAdminPassword)) {
+    throw 'SqlAdminPassword required. Pass -SqlAdminPassword or set $env:BRK223_SQLADMIN_PASSWORD.'
+}
 
 # --- Resolve SQL image: -SqlImage > $env:BRK223_SQL_IMAGE > error ----------
 if (-not $SqlImage) { $SqlImage = $env:BRK223_SQL_IMAGE }

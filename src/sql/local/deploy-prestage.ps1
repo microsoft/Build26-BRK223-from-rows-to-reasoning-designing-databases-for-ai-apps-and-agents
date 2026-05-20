@@ -15,10 +15,12 @@
     Server to connect to. Default: localhost,1434
 
 .PARAMETER SaPassword
-    Password for sa. Only used by the bootstrap step. Default: Password1
+    Password for sa. Only used by the bootstrap step.
+    Default: value of $env:BRK223_SA_PASSWORD. Required.
 
 .PARAMETER SqlAdminPassword
-    Password for sqladmin. Default: StrongPassw0rd
+    Password for sqladmin.
+    Default: value of $env:BRK223_SQLADMIN_PASSWORD. Required.
 
 .PARAMETER SkipBootstrap
     Skip the sa bootstrap step. Use after the very first deploy.
@@ -28,6 +30,8 @@
     expects 05 -> 08 to be run live in VS Code, not pre-staged.
 
 .EXAMPLE
+    $env:BRK223_SA_PASSWORD = '<sa pwd>'
+    $env:BRK223_SQLADMIN_PASSWORD = '<sqladmin pwd>'
     .\deploy-prestage.ps1
     # First run: bootstraps sqladmin, deploys 00 -> 04.
 
@@ -38,13 +42,20 @@
 [CmdletBinding()]
 param(
     [string]$Server = 'localhost,14330',
-    [string]$SaPassword = 'Password1',
-    [string]$SqlAdminPassword = 'StrongPassw0rd',
+    [string]$SaPassword = $env:BRK223_SA_PASSWORD,
+    [string]$SqlAdminPassword = $env:BRK223_SQLADMIN_PASSWORD,
     [switch]$SkipBootstrap,
     [switch]$IncludeOnStage
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $SkipBootstrap -and [string]::IsNullOrEmpty($SaPassword)) {
+    throw 'SaPassword required. Pass -SaPassword or set $env:BRK223_SA_PASSWORD.'
+}
+if ([string]::IsNullOrEmpty($SqlAdminPassword)) {
+    throw 'SqlAdminPassword required. Pass -SqlAdminPassword or set $env:BRK223_SQLADMIN_PASSWORD.'
+}
 
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
@@ -85,8 +96,11 @@ function Invoke-SqlScript {
 # --- Step 1: sa bootstrap (creates sqladmin) ---
 if (-not $SkipBootstrap) {
     Write-Host "Step 1: sa bootstrap (one-time)" -ForegroundColor Yellow
-    Invoke-SqlScript -Path (Join-Path $sqlDir '_bootstrap_login.sql') `
-                     -User 'sa' -Password $SaPassword -Database 'master'
+    # _bootstrap_login.sql references $(SqlAdminPassword); pass via SqlcmdVariables
+    # so the password is never written to disk as a literal.
+    Invoke-SqlsimScript -Path (Join-Path $sqlDir '_bootstrap_login.sql') `
+                        -Server $Server -User 'sa' -Password $SaPassword -Database 'master' `
+                        -SqlcmdVariables @{ SqlAdminPassword = $SqlAdminPassword }
 } else {
     Write-Host "Step 1: SKIPPED (-SkipBootstrap)" -ForegroundColor DarkYellow
 }
@@ -130,4 +144,4 @@ if ($IncludeOnStage) {
 
 Write-Host ""
 Write-Host "Pre-stage deployment complete." -ForegroundColor Green
-Write-Host "Connection going forward: $Server / sqladmin / $SqlAdminPassword / TrustServerCertificate=Yes" -ForegroundColor Gray
+Write-Host "Connection going forward: $Server / sqladmin / <password from `$env:BRK223_SQLADMIN_PASSWORD> / TrustServerCertificate=Yes" -ForegroundColor Gray

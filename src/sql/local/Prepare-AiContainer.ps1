@@ -158,4 +158,6 @@ Write-Host $probe
 
 Write-Host ""
 Write-Host "Prereq complete. Now run:" -ForegroundColor Green
-Write-Host "  .\deploy-prestage.ps1 -SqlAdminPassword 'StrongPassw0rd'" -ForegroundColor Green
+Write-Host "  `$env:BRK223_SA_PASSWORD = '<sa pwd>'" -ForegroundColor Green
+Write-Host "  `$env:BRK223_SQLADMIN_PASSWORD = '<sqladmin pwd>'" -ForegroundColor Green
+Write-Host "  .\deploy-prestage.ps1" -ForegroundColor Green

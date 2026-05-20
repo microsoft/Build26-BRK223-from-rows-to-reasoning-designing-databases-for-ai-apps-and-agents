@@ -14,7 +14,13 @@ var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOpt
 // to avoid the Windows MSSQLSERVER DAC listener on 1434. Works from any
 // docker network (including Aspire's per-run session network) because it
 // routes through the host gateway.
-// Override with: aspire run -- --parameter sqlconn="..."
+//
+// Read from $env:BRK223_SQL_CONNECTION_STRING so no credentials are
+// checked into source. Set before `dotnet run apphost.cs`, e.g.:
+//   $env:BRK223_SQL_CONNECTION_STRING =
+//     "Server=host.docker.internal,14330;Database=zavalivesitedb;" +
+//     "User Id=sqladmin;Password=<from env>;TrustServerCertificate=True;" +
+//     "Encrypt=True;Command Timeout=180"
 //
 // Command Timeout=180 — raised from the SqlClient default of 30s because
 // dbo.usp_GenerateMitigation calls sp_invoke_external_rest_endpoint to a
@@ -24,10 +30,11 @@ var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOpt
 // ProposedMitigation. Microsoft.Data.SqlClient honors `Command Timeout`
 // as a connection-string keyword since v2.1; sets the default
 // SqlCommand.CommandTimeout for every command opened on the connection.
-var sqlConn = builder.AddParameter(
-    "sqlconn",
-    "Server=host.docker.internal,14330;Database=zavalivesitedb;User Id=sqladmin;Password=StrongPassw0rd;TrustServerCertificate=True;Encrypt=True;Command Timeout=180",
-    secret: true);
+var sqlConnValue = Environment.GetEnvironmentVariable("BRK223_SQL_CONNECTION_STRING")
+    ?? throw new InvalidOperationException(
+        "BRK223_SQL_CONNECTION_STRING is not set. Set it before launching AppHost. " +
+        "See the comment above this line for the expected format.");
+var sqlConn = builder.AddParameter("sqlconn", sqlConnValue, secret: true);
 
 // Data API Builder — single container serves REST (/api/*) for the Web app
 // and MCP (/mcp) for the VS Code agent. dab-config.json is bind-mounted
