@@ -53,7 +53,7 @@ Each demo is self-contained under `src/`. Open the demo's README for prerequisit
 |---|---|---|
 | **[Azure SQL — From Database to Live Site, with AI Agents in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
 | **Cosmos DB** | *Coming soon.* | 🚧 In progress |
-| **Azure HorizonDB (PostgreSQL)** | *Coming soon.* | 🚧 In progress |
+| **[Azure HorizonDB — Zava Designer Agent](src/horizondb/README.md)** | AI Pipelines (`ai.create_pipeline`) + hybrid search (`ai.search` with BM25 + DiskANN + reranking) + Apache AGE graph traversal + LLM calls (`azure_ai.generate`, `azure_ai.rank`) — all inside one Postgres database. A React + Express app runs a 6-tool agent pipeline against HorizonDB to design a room from a 100K product catalog. | 🚧 In progress |
 
 ### 🏫 Getting started in a guided session
 

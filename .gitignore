@@ -44,3 +44,5 @@ obj/
 # Cloud-deploy intermediates (Prep-Cloud-Hosting.ps1 outputs Blazor publish here)
 src/sql/azure/hosting/blazor-publish/
 
+src/horizondb/demo-sql/setup/ai-pipelines-setup.sql
+src/horizondb/private
