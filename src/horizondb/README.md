@@ -41,26 +41,37 @@ src/horizondb/
 ├── demo-build-ui-skill.md             # How the UI was built (component playbook)
 ├── demo-sql/                          # SQL scripts for the demo features
 │   ├── data_ingest_with_ai_pipelines.sql   # AI Pipeline: chunk + embed 100K products
-│   ├── data_retrieval_with_ai_search.sql    # Hybrid search with reranking
-│   ├── data_graph_query.sql                # Apache AGE graph: styles + categories
+│   ├── data_retrieval_with_ai_search.sql   # Hybrid search with reranking
+│   ├── data_graph_query.sql                # Apache AGE graph queries
 │   └── setup/                              # One-time setup scripts
 │       ├── setup.sql                       # Extensions and base config
-│       ├── product-sample-table.sql        # Product table DDL
-│       ├── ai-pipelines-setup.sql          # AI pipeline prerequisites
 │       ├── ai-search.sql                   # Search index setup
 │       ├── graph_creation.sql              # AGE graph schema
 │       ├── cleanup.sql                     # Teardown script
-│       ├── product_sample_may13.csv        # Sample product data
-│       └── sample_data_products.csv        # Additional sample data
+│       └── data/                           # Sample data + table DDL
+│           ├── product-sample-table.sql    # Product table DDL
+│           └── product_sample_may13.csv    # Sample product data
 └── zava-designer-agent-ui-demo/       # Full-stack web app
     ├── server.js                      # Express backend — 6-tool pipeline
     ├── package.json                   # Dependencies
     ├── vite.config.js                 # Dev server config
+    ├── Zava_logo.png                  # Brand logo
     ├── public/                        # Room photos + logos
     └── src/                           # React frontend
         ├── App.jsx                    # Main layout + state machine
         ├── index.css                  # All styles (~2000 lines)
-        └── components/               # RoomView, SuggestionsPanel, QueryTrace, etc.
+        ├── main.jsx                   # React entry point
+        ├── components/                # UI components
+        │   ├── AgentTrace.jsx         # Tool call details overlay
+        │   ├── ChatBubble.jsx         # Floating chat panel
+        │   ├── DesignDrawer.jsx       # Settings drawer
+        │   ├── DesignPanel.jsx        # Design controls panel
+        │   ├── ProductCard.jsx        # Individual product display
+        │   ├── QueryTrace.jsx         # Pipeline steps visualization
+        │   ├── RoomView.jsx           # Room photo + product dots
+        │   └── SuggestionsPanel.jsx   # Right sidebar with picks
+        └── data/
+            └── mockData.js            # Fallback data for offline dev
 ```
 
 ---
@@ -83,21 +94,29 @@ Run the setup scripts against your HorizonDB instance in order:
 ```bash
 # Connect to your HorizonDB server with psql, then run:
 \i demo-sql/setup/setup.sql
-\i demo-sql/setup/product-sample-table.sql
-\i demo-sql/setup/ai-pipelines-setup.sql
+\i demo-sql/setup/data/product-sample-table.sql
 \i demo-sql/setup/ai-search.sql
 \i demo-sql/setup/graph_creation.sql
 ```
 
-### 2. Run the AI pipelines and search setup
+> **Note:** The `private/` folder contains internal function definitions (`ai-pipelines-setup.sql`, `ai-search-internal.sql`) that must be run on the server before the demo scripts. These are gitignored and not published — contact the demo owner for access.
+
+### 2. Load sample data
+
+```bash
+# Load product data from CSV
+\copy product_metadata_demo FROM 'demo-sql/setup/data/product_sample_may13.csv' WITH (FORMAT csv, HEADER true);
+```
+
+### 3. Run the demo scripts
 
 ```bash
 \i demo-sql/data_ingest_with_ai_pipelines.sql
-\i demo-sql/data_retrival_with_ai_search.sql
+\i demo-sql/data_retrieval_with_ai_search.sql
 \i demo-sql/data_graph_query.sql
 ```
 
-### 3. Start the web app
+### 4. Start the web app
 
 ```bash
 cd zava-designer-agent-ui-demo
@@ -117,7 +136,7 @@ npm run dev:full
 
 The frontend opens at `http://localhost:5180` and proxies API calls to the Express backend on `:3001`.
 
-### 4. Use the app
+### 5. Use the app
 
 1. Open `http://localhost:5180`
 2. Click **"Design My Room"**
