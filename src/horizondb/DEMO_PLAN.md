@@ -17,6 +17,7 @@
 | 2 | Hybrid Search with Reranking | 5 min | `ai.search` across 6 categories — BM25 + DiskANN + semantic reranking in one call |
 | 3 | Graph: Style-Based Discovery | 6 min | Flash style pipeline output (1 min), then Cypher queries traverse Product → Style → SIMILAR_TO → Product |
 | 4 | Full Circle: The Agent | 3 min | Back to Zava Designer Agent — open the tool trace, show all 6 tools calling HorizonDB under the hood |
+| 5 | Production-Ready | 1 min | Sizzle reel of 4 variant consumer apps and internal chatbot. CTA: "Clone the repo." |
 
 ---
 
@@ -224,7 +225,7 @@ While the agent is thinking, **open the tool trace panel** to show the 6-tool pi
 | Step | Tool | What it calls in HorizonDB | Purpose |
 |------|------|---------------------------|---------|
 | 1 | `analyze_room_photo` | `azure_ai.generate()` | LLM reads the room photo and identifies style, colors, existing furniture, and gaps |
-| 2 | `get_semantic_context` | `pg_catalog` column comments + `semantic_dictionary` | Reads the schema to understand what columns exist and expands style terms |
+| 2 | `get_semantic_context` | `pg_catalog` column comments + `semantic_dictionary` | Reads the schema to understand what columns exist and expands style terms. So every search call is intentional, not fuzzy guesswork. |
 | 3 | `hybrid_search_products` | `ai.search()` × 6 categories | BM25 + DiskANN + reranking — one search per category (Chairs, Coffee Tables, Lamps, Rugs, Bookcases, Wall Art) |
 | 4 | `find_related_products` | AGE Cypher / `bought_together` JOIN | Graph traversal to find products connected by style or purchase patterns |
 | 5 | `filter_products` | SQL `WHERE` on price + rating | Enforces budget ceiling per item and minimum 4.0★ rating |
@@ -237,6 +238,20 @@ While the agent is thinking, **open the tool trace panel** to show the 6-tool pi
 **Close the loop:** The products appear on the room photo as interactive dots. The sidebar shows prices, ratings, and a running budget total. "This is what it looks like when you build an AI-native application on a single database."
 
 **Final line:** "Pipelines to enrich your data. Hybrid search to find it. A graph to connect it. And an LLM to reason over it. All inside Postgres — that's HorizonDB."
+
+
+---
+
+## ACT 5 — Production-Ready
+
+**Duration:** ~1 minute
+
+**What happens:** Run a quick sizzle reel showing 4 variant consumer apps plus an internal chatbot built on the same HorizonDB foundation.
+
+**Say:** "This isn't just a single demo app. This pattern scales across multiple product experiences and internal copilots. Clone the repo and start building your own."
+
+**Summary line:** "It is all in enterprise-ready HorizonDB."
+
 
 ---
 
