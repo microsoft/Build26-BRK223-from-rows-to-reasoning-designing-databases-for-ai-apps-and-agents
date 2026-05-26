@@ -41,11 +41,16 @@
 [CmdletBinding()]
 param(
     [string]$ContainerName  = 'azsql-zavalivesite',
-    [string]$SkillFolder    = 'c:\bwsql\ollama\container',
+    [string]$SkillFolder    = '',  # defaults to $PSScriptRoot\skills\container if empty
     [string]$EmbeddingModel = 'mxbai-embed-large',
     [string]$ChatModel      = 'phi4-mini',
     [switch]$SkipRestart
 )
+
+# Resolve skill folder default
+if (-not $SkillFolder) {
+    $SkillFolder = Join-Path $PSScriptRoot 'skills\container'
+}
 
 $ErrorActionPreference = 'Stop'
 

@@ -19,6 +19,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+if (-not $env:BRK223_SQL_CONNECTION_STRING) {
+    if (-not $env:BRK223_SQLADMIN_PASSWORD) {
+        throw 'BRK223_SQL_CONNECTION_STRING is not set and BRK223_SQLADMIN_PASSWORD is missing. Set one of them before launching AppHost.'
+    }
+
+    $env:BRK223_SQL_CONNECTION_STRING = "Server=host.docker.internal,14330;Database=zavalivesitedb;User Id=sqladmin;Password=$env:BRK223_SQLADMIN_PASSWORD;TrustServerCertificate=True;Encrypt=True;Command Timeout=180"
+}
+
 $apphostDir = Join-Path $PSScriptRoot 'dotnet\AppHost'
 if (-not (Test-Path (Join-Path $apphostDir 'apphost.cs'))) {
     throw "apphost.cs not found at $apphostDir"

@@ -1,0 +1,19 @@
+# Caddy reverse proxy in front of Ollama for SQL Server 2025 on Linux.
+# Listens on :8444 with a Caddy-internal local CA cert covering localhost,
+# 127.0.0.1, and the container eth0 IP (override the last one if needed).
+{
+        admin off
+        auto_https disable_redirects
+        servers {
+                protocols h1 h2
+        }
+}
+
+localhost:8444, 127.0.0.1:8444 {
+        tls internal
+        log {
+                output file /var/log/ai/caddy-access.log
+                format json
+        }
+        reverse_proxy 127.0.0.1:11434
+}
