@@ -3,12 +3,6 @@
 -- DATA RETRIEVAL: Real Queries for Roommate UI Demo
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
--- =============================================================================
--- SETUP: pg_fts Extension & BM25 Index
--- =============================================================================
-
-SET search_path = public, pgfts;
-
 CREATE EXTENSION IF NOT EXISTS pg_fts;
 
 CREATE INDEX IF NOT EXISTS idx_product_sample_fts ON public.product_rag_pipeline_build_2026_output

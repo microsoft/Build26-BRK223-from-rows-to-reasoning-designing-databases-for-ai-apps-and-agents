@@ -1,4 +1,22 @@
-SELECT * FROM product_sample LIMIT 5;
+-- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+-- DATA INGESTION: Real-time Ingestion of Product Data with AI Pipelines
+-- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+-- ---------------------------------------------------------------------------
+-- ACT 0 — Enable AI Model Management
+-- Expected output: default-chat (gpt-5), default-embedding (text-embedding-3-small)
+-- ---------------------------------------------------------------------------
+
+SELECT * FROM model_registry.model_list_all();
+SELECT azure_openai.create_embeddings(input => 'hello world');
+
+-- ---------------------------------------------------------------------------
+-- ACT 0 PART B — View the Dataset
+-- Using a subset of the data for demonstration purposes.
+-- Also show the data types and constraints in the schema viewer
+-- ---------------------------------------------------------------------------
+
+SELECT title, description, categories, price, average_rating, rating_number, content, images FROM product_sample LIMIT 5;
 
 -- ---------------------------------------------------------------------------
 -- ACT 1 — RAG Pipeline in Seconds
@@ -20,11 +38,11 @@ SELECT ai.create_pipeline(
 );
 -- Auto-creates: public.{pipeline_name}_output (doc_id, chunk_index, chunk_text, embedding, ...)
 
--- Run it once to backfill the existing rows.
 SELECT ai.run('product_rag_pipeline_build_2026');
 
 -- ---------------------------------------------------------------------------
 -- ACT 1B — Monitor Pipeline 
+-- Show in VSCode extension as well
 -- ---------------------------------------------------------------------------
 
 SELECT * FROM ai.status('product_rag_pipeline_build_2026');
@@ -35,7 +53,7 @@ SELECT * FROM ai.list_pipelines();
 -- ---------------------------------------------------------------------------
 
 SELECT count(*) FROM product_rag_pipeline_build_2026_output;
-SELECT * FROM product_rag_pipeline_build_2026_output;
+SELECT doc_id, chunk_index, chunk_text, LEFT(chunk_text, 100) AS embedding_preview FROM product_rag_pipeline_build_2026_output LIMIT 5;
 
 -- ---------------------------------------------------------------------------
 -- ACT 1D — Vector Search
