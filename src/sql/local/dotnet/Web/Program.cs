@@ -17,7 +17,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // Local maps to DabBaseUrl (default http://localhost:8765).
 // Cloud maps to DabBaseUrl_Cloud (default http://localhost:8766) -- the
 // second DAB pointed at Hyperscale + AOAI. Until that DAB is provisioned
-// (P3 in backlog.md), `?dab=cloud` will simply 404 against :8766; the
+// (P3 in the source notes), `?dab=cloud` will simply 404 against :8766; the
 // page still renders correctly because the polling loop swallows network
 // errors and the footer flips to the cloud branding.
 var dabLocal = builder.Configuration["DabBaseUrl"]       ?? "http://localhost:8765";
