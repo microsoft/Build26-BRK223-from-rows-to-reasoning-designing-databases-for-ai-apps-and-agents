@@ -218,8 +218,7 @@ if (-not $SkipBlazor) {
 
     # Bake the cloud DAB URL into the SWA-hosted Blazor.
     $cloudAppSettings = @{
-        DabBaseUrl       = "https://$acaDabFqdn"
-        DabBaseUrl_Cloud = "https://$acaDabFqdn"
+        DabBaseUrl = "https://$acaDabFqdn"
     } | ConvertTo-Json -Depth 4
 
     $settingsPath = Join-Path $wwwroot 'appsettings.Production.json'

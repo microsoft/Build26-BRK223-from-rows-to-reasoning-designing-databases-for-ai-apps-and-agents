@@ -1,5 +1,48 @@
 # BRK223 — 7-Minute Demo Flow
 
+## Presenter cheat sheet (one page)
+
+1. Beat 0 (0:00-0:20)
+  - Tool: Browser
+  - Run: `./Open-LiveSite.ps1`
+  - Do: Show empty state.
+  - Say: "One SQL row will light up this page."
+
+2. Beat 1 (0:20-2:00)
+  - Tool: VS Code + MSSQL extension
+  - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
+  - Open file: `src/sql/local/sqlscripts/05_create_incident.sql`
+  - Do: Run INSERT, run verify, refresh browser.
+  - Say: "JSON + regex + embeddings in one statement."
+
+3. Beat 2 (2:00-3:00)
+  - Tool (run): VS Code + MSSQL extension
+  - Tool (plan): SSMS Actual Execution Plan
+  - Open file: `src/sql/local/sqlscripts/06_hybrid_search.sql`
+  - Do: Run proc; in SSMS point to `Vector Index Seek` (`vec_archive_embedding`) and `Index Seek` (`ix_runbook_tags`).
+  - Say: "One query, two index families; SSMS is used because VS Code plan rendering is inconsistent for vector operators."
+
+4. Beat 3 (4:30-5:00)
+  - Tool: VS Code + MSSQL extension
+  - Open file: `src/sql/local/sqlscripts/07_log_timeline.sql`
+  - Do: Run timeline query for incident 5012.
+  - Say: "Tamper-evident ledger timeline, no external pipeline."
+
+5. Beat 4 (5:00-6:30)
+  - Tool: VS Code editor + Copilot Chat (agent mode) + Browser
+  - Open file: `src/sql/azure/hosting/dab/dab-config.json`
+  - Do: Show `runtime.rest` + `runtime.mcp`; new chat; select `live-site-sql`; run `Mitigate incident 5012 @live-site-sql`; switch to browser and show mitigation.
+  - Say: "Grounded plan from corpus + live diagnostics in one loop."
+
+6. Beat 5 (6:30-7:00)
+  - Tool: VS Code editor split + MSSQL extension (Hyperscale)
+  - Open files:
+    - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
+    - `src/sql/azure/sqlscripts/04a_proc_generate_mitigation_direct.sql`
+    - `src/sql/azure/sqlscripts/04a_proc_generate_mitigation_gateway.sql`
+  - Do: Show same proc shape across local/direct/gateway; run cloud summary select for incident 5012.
+  - Say: "Same row and JSON contract across local and cloud endpoints."
+
 > Live on laptop. Three surfaces audience sees:
 > **(1)** the **Zava On-Call Console** — a Blazor WebAssembly app served locally by the Aspire AppHost, fetching from DAB REST.
 > **(2)** the **MSSQL extension** in VS Code — queries, Plan Visualizer, DAB UI, deployment.
@@ -11,19 +54,6 @@
 >
 > Last update: 2026-05-08
 
----
-
-## Cuts (do not attempt on stage)
-
-- ❌ Live `CREATE VECTOR INDEX` (100-row min, slow, boring) — pre-built.
-- ❌ Building schema / DAB config / EXTERNAL MODEL — pre-deployed before doors open.
-- ❌ **Separate .NET Zava On-Call Console (custom backend).** The frontend lives, but as a Blazor WASM app served by the Aspire AppHost — no custom HTTP backend. Reads DAB REST directly. **(2)** GitHub Copilot Chat in agent mode talks to the same DAB over HTTP MCP. Same architecture (`agent → MCP → DAB → SQL` and `browser → REST → DAB → SQL`), one fewer process to babysit, no hotel-wifi risk for the front-end.
-- ❌ VS Code graphical plan for vector operators (known rendering issue). Use SSMS for Beat 2 actual plan.
-- ❌ Two incidents (inline INSERT *and* .NET POST) — keep just the inline INSERT.
-- ❌ **`sp_invoke_external_rest_endpoint` as a standalone beat.** It's *in the demo* — inside `usp_GenerateMitigation`, which DAB exposes as a stored-procedure MCP tool the agent calls. We don't run `sp_invoke` from the editor; we let the proc do it.
-
----
-
 ## The flow
 
 | # | Beat | Time | Window | Audience sees |
@@ -33,7 +63,7 @@
 | 2 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (run query) + SSMS (plan view) | Run `06_hybrid_search.sql`, then show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
 | 3 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
 | 4 | DAB → MCP → SKILL-driven agent loop → page lights up | 5:00–6:30 | `dab-config.json` + Copilot Chat (agent mode, SKILL attached) + browser | (a) Show `dab-config.json`: REST + MCP from one config; `GenerateMitigation` + the three `dx_*` procs are stored-proc entities. (b) Copilot Chat: select `live-site-sql` agent, type *"Mitigate incident 5012 `@live-site-sql`"* (the `@`-mention forces deterministic skill load — own the choice on stage, see Beat 4(b)). The agent runs the protocol — hybrid_search → dx_index_exists / dx_resource_pressure / dx_deadlock_recent → generate_mitigation (with @DiagnosticsJson) → read back. (c) Alt-tab to browser — AI panel populates with summary, steps, citations, plus a "validated by 3 live diagnostics" badge |
-| 5 | Same page, swap DAB to Hyperscale + AOAI | 6:30–7:00 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4-mini`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Browser URL bar: `?dab=local` → `?dab=cloud`, refresh; footer flips to *"Powered by Azure SQL Hyperscale + Azure OpenAI."* Same row. Same page. *"In production the page lives in SWA, DAB in Container Apps — lift-and-shift."* |
+| 5 | Same page, cloud-hosted backend | 6:30–7:00 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4-mini`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Open the cloud-hosted site (SWA/App Service) and refresh to show the same incident contract via cloud DAB. Same row. Same page shape. *"In production the page lives in SWA/App Service, DAB in Container Apps — lift-and-shift."* |
 
 Total: 7:00. *(Beat 2 reclaimed 1:30 from the old slow→fast version — spend it on Beat 4 or trim the talk.)*
 
@@ -41,7 +71,7 @@ Total: 7:00. *(Beat 2 reclaimed 1:30 from the old slow→fast version — spend 
 
 ## Stage runbook (concise, do this live)
 
-1. **Beat 0 (Browser):** Open `http://localhost:8080/?dab=local`.
+1. **Beat 0 (Browser):** Run `./Open-LiveSite.ps1`.
   - Tool: Browser
   - Show: empty/placeholder state for incident 5012.
 
@@ -104,7 +134,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 ### Beat 0 — Open on the website (0:20)
 
 - Tool: Browser
-- Open: `http://localhost:8080/?dab=local`
+- Run: `./Open-LiveSite.ps1`
 - Show: empty state (no mitigation yet, placeholder chips/fields)
 - Say: *"This is the on-call console. In 30 seconds, one SQL INSERT will light up this page."*
 

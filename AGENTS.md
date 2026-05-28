@@ -100,7 +100,7 @@ These files have been validated end-to-end (Build → Verify → Start → Inser
 
   | Env var | Used by |
   |---|---|
-  | `BRK223_SA_PASSWORD` | Container SA password — `Build.ps1`, `Start-AzureSqlContainer.ps1`, `Verify-Build.ps1`, `Test-AzureSqlConnection.ps1`, `Prep-Demo.ps1` |
+  | `BRK223_SA_PASSWORD` | Container SA password — `Build.ps1`, `Start-AzureSqlContainer.ps1`, `Verify-Build.ps1`, `Test-AzureSqlConnection.ps1`, `Prepare-DemoEnvironment.ps1` |
   | `BRK223_SQLADMIN_PASSWORD` | App login `sqladmin` — `deploy-prestage.ps1`, `Generate-Mitigation.ps1`, `Insert-Incident.ps1`, `Reset-Incident.ps1`, `Reset-ForBeat2.ps1` |
   | `BRK223_SQL_CONNECTION_STRING` | Aspire `apphost.cs` AppHost (DAB connection) |
   | `BRK223_PUBLISHER_EMAIL` | `Prep-Cloud.ps1 -ReDeploy` (APIM `publisherEmail`) |

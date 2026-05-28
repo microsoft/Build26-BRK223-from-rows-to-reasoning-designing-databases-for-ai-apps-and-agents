@@ -4,8 +4,7 @@
 @using System.Net.Http.Json
 @using System.Text.Json
 @using System.Text.Json.Serialization
-@inject NavigationManager Nav
-@inject DabEndpoints DabUrls
+@inject IHttpClientFactory HttpClientFactory
 @implements IDisposable
 
 <PageTitle>Zava Live Site Incident Systems</PageTitle>
@@ -222,21 +221,10 @@
     private DateTime? lastRefreshed;
     private System.Threading.Timer? pollTimer;
     private HttpClient? http;
-    private string dabMode = "local";   // "local" or "cloud" — driven by ?dab= query string
 
     protected override void OnInitialized()
     {
-        // Parse ?dab=local|cloud once on initialization. Beat 5 flips this.
-        var uri = Nav.ToAbsoluteUri(Nav.Uri);
-        var q = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        var modeRaw = q["dab"];
-        if (!string.IsNullOrEmpty(modeRaw))
-        {
-            var mode = modeRaw.ToLowerInvariant();
-            if (mode == "cloud" || mode == "local") { dabMode = mode; }
-        }
-        var baseUrl = dabMode == "cloud" ? DabUrls.Cloud : DabUrls.Local;
-        http = new HttpClient { BaseAddress = new Uri(baseUrl) };
+        http = HttpClientFactory.CreateClient("dab");
 
         // Poll every 2 seconds — Beat 4(c) wants the AI panel to light up
         // automatically when GenerateMitigation finishes; alt-tab from Copilot
@@ -295,9 +283,7 @@
         return incident?.Service is { Length: > 0 } svc ? svc : "";
     }
 
-    private string FooterText() => dabMode == "cloud"
-        ? "Powered by Azure SQL Hyperscale + Azure OpenAI · DAB REST · MCP · live data."
-        : "Powered by Azure SQL · DAB REST · MCP · live data.";
+    private string FooterText() => "Powered by Azure SQL · DAB REST · MCP · live data.";
 
     private string? TagValue(string key)
     {

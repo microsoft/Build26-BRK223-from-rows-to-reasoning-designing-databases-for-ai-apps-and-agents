@@ -182,7 +182,7 @@ Returns top-3 prior incidents + top-3 runbook chunks as a result set the agent u
 
 **Why distinct names per side, not the same name across both sides:** swapping by name lets both EXTERNAL MODELs coexist in the same database (no drop/recreate on stage), matches what real customers do during migration, and lets a hybrid setup (cloud chat over local DB, or vice versa) exist without renaming.
 
-**Website hosting.** The Blazor WASM app is a viewer; it doesn't move. In the demo it's served locally by the Aspire AppHost (`Start-LiveSite.ps1`) and Beat 5 swaps the DAB base URL it points at (`?dab=local` → `?dab=cloud`). In production, the same compiled `wwwroot` deploys unchanged to Azure Static Web Apps or App Service; DAB runs in Azure Container Apps. The narration calls this out; one Q&A backup slide shows the cloud topology.
+**Website hosting.** The Blazor WASM app is a viewer; it doesn't move. In the demo it's served locally by the Aspire AppHost (`Start-LiveSite.ps1`). In production, the same compiled `wwwroot` deploys unchanged to Azure Static Web Apps or App Service; DAB runs in Azure Container Apps. The narration calls this out; one Q&A backup slide shows the cloud topology.
 
 ## 11. Enterprise pitch (threaded throughout)
 
@@ -227,4 +227,4 @@ Returns top-3 prior incidents + top-3 runbook chunks as a result set the agent u
    - Azure OpenAI resource with `text-embedding-3-small` and `gpt-4o-mini` deployments.
    - Second local DAB process pre-launched on `:5002` pointed at Hyperscale (alongside container DAB on `:5001`).
    - Q&A backup slide: cloud topology (SWA → Container Apps DAB → Hyperscale → AOAI).
-10. **Website spec:** Blazor WebAssembly app (`dotnet/Web/ZavaLiveSite.Web.csproj`) using Microsoft.FluentUI.AspNetCore.Components 4.14.1. Single page (`Pages/Incident.razor`) reads `?dab=local|cloud` query param to choose DAB base URL (DAB endpoint is auto-injected by Aspire `WithReference(dab)` for the local case). Polls `GET /api/Incident/IncidentId/5012` every 2 sec; renders `AlertPayload`, `Tags` chips, `ProposedMitigation` panel.
+10. **Website spec:** Blazor WebAssembly app (`dotnet/Web/ZavaLiveSite.Web.csproj`) using Microsoft.FluentUI.AspNetCore.Components 4.14.1. Single page (`Pages/Incident.razor`) calls one configured DAB base URL (`DabBaseUrl`). Polls `GET /api/Incident/IncidentId/5012` every 2 sec; renders `AlertPayload`, `Tags` chips, `ProposedMitigation` panel.

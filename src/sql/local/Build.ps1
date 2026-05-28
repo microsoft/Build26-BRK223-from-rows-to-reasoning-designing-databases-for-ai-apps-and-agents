@@ -16,18 +16,18 @@
       3. Node.js LTS (winget OpenJS.NodeJS.LTS).
       4. .NET 10 SDK (winget Microsoft.DotNet.SDK.10).
       5. sqlsim probe (resolved via Get-Sqlsim - PATH, $env:SQLSIM_PATH, or repo dev path).
-      6. Azure CLI (winget Microsoft.AzureCLI) + interactive `az login`
-         if not already signed in. Only required when -SqlImage points at an
-         *.azurecr.io registry; harmless otherwise.
+        6. Azure CLI (winget Microsoft.AzureCLI) + interactive `az login`
+            if not already signed in. Required only when a pull from an
+            *.azurecr.io registry is needed.
       7. DAB container image pulled
          (mcr.microsoft.com/azure-databases/data-api-builder:2.0.0-rc).
       8. GitHub Copilot CLI (npm i -g @github/copilot) + interactive
          `copilot login` if not already authenticated.
-      9. If azsql-zavalivesite doesn't exist, call Start-AzureSqlContainer.ps1
-         to pull the SQL image (resolved via -SqlImage or `$env:BRK223_SQL_IMAGE).
-         If the image is hosted on an *.azurecr.io registry, that script will
-         do an `az acr login --expose-token` first; otherwise it skips the
-         `az` step entirely.
+        9. If azsql-zavalivesite doesn't exist, call Start-AzureSqlContainer.ps1
+            to start the SQL image (resolved via -SqlImage or `$env:BRK223_SQL_IMAGE).
+            That script reuses a local image when present. If pull is needed and
+            the image is hosted on an *.azurecr.io registry, it runs `az acr login`
+            first; otherwise it skips `az` entirely.
      10. Pull / verify Ollama models loaded inside the container
          (Prepare-AiContainer.ps1).
      11. Restore SQL state (deploy-prestage.ps1) if dbo.IncidentArchive is
@@ -155,10 +155,13 @@ if (-not $SqlImage) {
 No SQL image specified. Pass -SqlImage or set `$env:BRK223_SQL_IMAGE.
 Examples:
   -SqlImage 'mcr.microsoft.com/mssql/server:2025-latest'                                    # public SQL Server 2025
-  -SqlImage 'sqlbuilds.azurecr.io/mssql-p-adhoc/.../developer-edition:<tag>'                # private Azure SQL preview (Microsoft only)
+    -SqlImage '<private-preview-image-from-session-owner>'                                     # private Azure SQL preview (Microsoft only)
 See the BRK223 README for the differences between the two.
 "@
 }
+
+$sqlRegistry = ($SqlImage -split '/', 2)[0]
+$sqlImageIsAcr = $sqlRegistry -like '*.azurecr.io'
 
 # Common helpers (Get-Sqlsim, Invoke-SqlsimQuery, Invoke-SqlsimScript, SET preamble).
 . (Join-Path $PSScriptRoot 'Common.ps1')
@@ -320,25 +323,39 @@ try {
 if ($script:Failed.Count -gt 0) { Write-Host "`nRequired check failed. Stopping." -ForegroundColor Red; exit 1 }
 
 # --- 6. Azure CLI + az login -------------------------------------------------
-Write-Step '6. Azure CLI + az login (needed for ACR pull of the SQL image)'
-if ($SkipWinget) {
-    Write-Info 'SkipWinget set - assuming Azure CLI already installed.'
-} else {
-    Install-WingetPackage -Id 'Microsoft.AzureCLI' -DisplayName 'Azure CLI' | Out-Null
-}
-if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-    Write-Fail 'az not on PATH after install. Open a new shell and re-run.'
-} else {
-    $acct = az account show --output json 2>$null | ConvertFrom-Json
-    if (-not $acct) {
-        Write-Warn2 'Not signed in to Azure - launching `az login` (browser device flow). Complete sign-in, then this script continues.'
-        az login --output none
-        $acct = az account show --output json 2>$null | ConvertFrom-Json
+$sqlImagePresent = (docker image inspect $SqlImage 2>$null | Out-String).Trim()
+$sqlImageLocal = -not [string]::IsNullOrWhiteSpace($sqlImagePresent)
+$needAzForSqlImage = $sqlImageIsAcr -and ($Force -or -not $sqlImageLocal)
+
+Write-Step '6. Azure CLI + az login (only when required for ACR pull)'
+if ($needAzForSqlImage) {
+    if ($SkipWinget) {
+        Write-Info 'SkipWinget set - assuming Azure CLI already installed.'
+    } else {
+        Install-WingetPackage -Id 'Microsoft.AzureCLI' -DisplayName 'Azure CLI' | Out-Null
     }
-    if (-not $acct) { Write-Fail 'az login did not produce an authenticated session.' }
-    else            { Write-Ok ("az logged in: {0} ({1})" -f $acct.user.name, $acct.name) }
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        Write-Fail 'az not on PATH after install. Open a new shell and re-run.'
+    } else {
+        $acct = az account show --output json 2>$null | ConvertFrom-Json
+        if (-not $acct) {
+            Write-Warn2 'Not signed in to Azure - launching `az login` (browser device flow). Complete sign-in, then this script continues.'
+            az login --output none
+            $acct = az account show --output json 2>$null | ConvertFrom-Json
+        }
+        if (-not $acct) { Write-Fail 'az login did not produce an authenticated session.' }
+        else            { Write-Ok ("az logged in: {0} ({1})" -f $acct.user.name, $acct.name) }
+    }
+    if ($script:Failed.Count -gt 0) { Write-Host "`nRequired check failed. Stopping." -ForegroundColor Red; exit 1 }
+} else {
+    if ($sqlImageIsAcr -and $sqlImageLocal) {
+        Write-Ok 'SQL image already local; skipping Azure CLI install/login for ACR.'
+    } elseif (-not $sqlImageIsAcr) {
+        Write-Ok 'SQL image registry is public; skipping Azure CLI install/login.'
+    } else {
+        Write-Ok 'Azure CLI step not required.'
+    }
 }
-if ($script:Failed.Count -gt 0) { Write-Host "`nRequired check failed. Stopping." -ForegroundColor Red; exit 1 }
 
 # --- 7. DAB container image --------------------------------------------------
 Write-Step "7. DAB container image ($DabImage)"
@@ -382,13 +399,12 @@ if ((Test-Path $copilotPath) -and $script:Failed.Count -eq 0) {
 
 # --- 9. Azure SQL container image -------------------------------------------
 Write-Step "9. Azure SQL container image ($SqlImage)"
-$sqlImagePresent = (docker image inspect $SqlImage 2>$null | Out-String).Trim()
 if ($sqlImagePresent -and -not $Force) {
     Write-Ok 'SQL image already pulled.'
 } elseif ($Force -and $sqlImagePresent) {
-    Write-Warn2 '-Force: Start-AzureSqlContainer.ps1 will re-pull the SQL image in step 10 (always pulls).'
+    Write-Warn2 '-Force: Start-AzureSqlContainer.ps1 reuses local image when available; remove the image first if you must force a fresh pull.'
 } else {
-    Write-Info 'SQL image not local; Start-AzureSqlContainer.ps1 will pull it via ACR token in step 10.'
+    Write-Info 'SQL image not local; Start-AzureSqlContainer.ps1 will pull it in step 10 (and use az acr login for private ACR images).'
 }
 
 if ($script:Failed.Count -gt 0) { Write-Host "`nRequired check failed. Stopping." -ForegroundColor Red; exit 1 }
