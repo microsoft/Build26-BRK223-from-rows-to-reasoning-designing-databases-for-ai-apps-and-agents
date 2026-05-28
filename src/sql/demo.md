@@ -201,9 +201,6 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 - Show: mitigation summary, citations, diagnostics badge
 - Say: *"The agent grounded each step in corpus evidence plus live diagnostics from the same database."*
 
-Plan B fallback:
-- If smoke test fails, play `fallback/beat4_agent_lights_up_page.mp4` and continue at Beat 5c.
-
 ### Beat 6 — Local vs cloud path (0:40)
 
 - Tool: VS Code editor split + MSSQL extension (Hyperscale)
@@ -223,11 +220,3 @@ WHERE   IncidentId = 5012;
 ```
 
 - Say: *"Same row and JSON contract across local and cloud endpoints."*
-
-## Fallback recordings
-
-- `beat0_open_website.mp4` — nice-to-have
-- `beat1_insert_then_refresh.mp4` — nice-to-have
-- `beat2_slow_to_fast.mp4` — high priority (plan visualizer + `@mssql` + retune is live-risk-prone)
-- **`beat4_agent_lights_up_page.mp4` — MANDATORY.** Plan B for Beat 5. Open in VLC paused on monitor 2 before doors. Includes the chat conversation through to the final mitigation answer; ends *before* the browser tab is shown so 5(c) flows in identically.
-- `beat5_three_panes_and_select.mp4` — nice-to-have. Captures the 3-pane editor split scroll + the Hyperscale `SELECT JSON_VALUE(...) FROM Incident WHERE IncidentId=5012` returning both `direct_summary` and `gateway_summary`.
