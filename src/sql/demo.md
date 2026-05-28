@@ -11,8 +11,8 @@
 - Beat 1 (0:20-1:00)
   - Tool: VS Code + MSSQL extension
   - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
-  - Do: Right-click connection -> Visualize and Design Schema; ask embedded Copilot Chat to describe the schema.
-  - Say: "Six demo tables, one data story."
+  - Do: Run `SELECT @@VERSION;` (call out that it reports Azure SQL), then right-click connection -> Visualize and Design Schema; ask embedded Copilot Chat to describe the schema.
+  - Say: "Azure SQL engine, six demo tables, one data story."
 
 - Beat 2 (1:00-2:00)
   - Tool: VS Code + MSSQL extension
@@ -64,7 +64,7 @@
 | # | Beat | Time | Window | Audience sees |
 |---|---|---|---|---|
 | 0 | Open on the website | 0:00–0:20 | Browser | Zava On-Call Console: SEV1 banner red, incident #5012 ACTIVE, AlertPayload empty / chips empty / AI panel empty ("No mitigation yet…"). *"For the next six minutes I'll show you the SQL that makes this page real."* |
-| 1 | Schema check (designer + Copilot Chat) | 0:20–1:00 | MSSQL ext (Visualize and Design Schema + Copilot Chat) | Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables; open embedded **Copilot Chat** and ask it to describe the schema in English. |
+| 1 | Schema check (version + designer + Copilot Chat) | 0:20–1:00 | MSSQL ext (query + Visualize and Design Schema + Copilot Chat) | Run `SELECT @@VERSION;` and call out that the engine reports Azure SQL, then right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables; open embedded **Copilot Chat** and ask it to describe the schema in English. |
 | 2 | Five-feature INSERT → refresh page | 1:00–2:00 | MSSQL ext + editor + browser refresh | Inline INSERT in `05_create_incident.sql`. Then alt-tab to browser, refresh: AlertPayload populates, three regex-derived chips light up, embedding-length verify in editor. |
 | 3 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (run query) + SSMS (plan view) | Run `06_hybrid_search.sql`, then show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
 | 4 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
@@ -83,7 +83,7 @@ Total: 7:00. *(Beat 3 reclaimed 1:30 from the old slow→fast version — spend 
 
 2. **Beat 1 (VS Code, MSSQL extension):** Open schema designer.
   - Tool: VS Code + MSSQL extension
-  - Action: right-click `localhost,14330 / zavalivesitedb` -> **Visualize and Design Schema**.
+  - Action: run `SELECT @@VERSION;` and call out Azure SQL in the result, then right-click `localhost,14330 / zavalivesitedb` -> **Visualize and Design Schema**.
   - Show: `Incident`, `IncidentArchive`, `Runbook`, `RunbookChunk`, `AppLog`, `PayrollBatch`.
 
 3. **Beat 2 (VS Code, MSSQL extension):** Insert incident row.
@@ -147,6 +147,8 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 ### Beat 1 — Schema check (0:40)
 
 - Tool: VS Code + MSSQL extension
+- Run: `SELECT @@VERSION;`
+- Say: *"This is Azure SQL."*
 - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
 - Show: `Incident`, `IncidentArchive`, `Runbook`, `RunbookChunk`, `AppLog`, `PayrollBatch`
 - Ask embedded Copilot Chat to summarize the schema in plain English
