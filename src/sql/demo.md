@@ -2,44 +2,44 @@
 
 ## Presenter cheat sheet (one page)
 
-1. Beat 0 (0:00-0:20)
+- Beat 0 (0:00-0:20)
   - Tool: Browser
   - Run: `./Open-LiveSite.ps1`
   - Do: Show empty state.
   - Say: "One SQL row will light up this page."
 
-2. Beat 1 (0:20-1:00)
+- Beat 1 (0:20-1:00)
   - Tool: VS Code + MSSQL extension
   - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
   - Do: Right-click connection -> Visualize and Design Schema; ask embedded Copilot Chat to describe the schema.
   - Say: "Six demo tables, one data story."
 
-3. Beat 2 (1:00-2:00)
+- Beat 2 (1:00-2:00)
   - Tool: VS Code + MSSQL extension
   - Open file: `src/sql/local/sqlscripts/05_create_incident.sql`
   - Do: Run INSERT, run verify, refresh browser.
   - Say: "JSON + regex + embeddings in one statement."
 
-4. Beat 3 (2:00-3:00)
+- Beat 3 (2:00-3:00)
   - Tool (run): VS Code + MSSQL extension
   - Tool (plan): SSMS Actual Execution Plan
   - Open file: `src/sql/local/sqlscripts/06_hybrid_search.sql`
   - Do: Run proc; in SSMS point to `Vector Index Seek` (`vec_archive_embedding`) and `Index Seek` (`ix_runbook_tags`).
   - Say: "One query, two index families; SSMS is used because VS Code plan rendering is inconsistent for vector operators."
 
-5. Beat 4 (4:30-5:00)
+- Beat 4 (4:30-5:00)
   - Tool: VS Code + MSSQL extension
   - Open file: `src/sql/local/sqlscripts/07_log_timeline.sql`
   - Do: Run timeline query for incident 5012.
   - Say: "Tamper-evident ledger timeline, no external pipeline."
 
-6. Beat 5 (5:00-6:30)
+- Beat 5 (5:00-6:30)
   - Tool: VS Code editor + Copilot Chat (agent mode) + Browser
   - Open file: `src/sql/azure/hosting/dab/dab-config.json`
   - Do: Show `runtime.rest` + `runtime.mcp`; new chat; select `live-site-sql`; run `Mitigate incident 5012 @live-site-sql`; switch to browser and show mitigation.
   - Say: "Grounded plan from corpus + live diagnostics in one loop."
 
-7. Beat 6 (6:30-7:00)
+- Beat 6 (6:30-7:00)
   - Tool: VS Code editor split + MSSQL extension (Hyperscale)
   - Open files:
     - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
@@ -144,11 +144,17 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 - Show: empty state (no mitigation yet, placeholder chips/fields)
 - Say: *"This is the on-call console. In 30 seconds, one SQL INSERT will light up this page."*
 
-### Beat 1 + 2 — Schema check then INSERT (1:40)
+### Beat 1 — Schema check (0:40)
 
 - Tool: VS Code + MSSQL extension
 - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
 - Show: `Incident`, `IncidentArchive`, `Runbook`, `RunbookChunk`, `AppLog`, `PayrollBatch`
+- Ask embedded Copilot Chat to summarize the schema in plain English
+- Say: *"Six demo tables, one data story."*
+
+### Beat 2 — INSERT then refresh (1:00)
+
+- Tool: VS Code + MSSQL extension
 - Open file: `src/sql/local/sqlscripts/05_create_incident.sql`
 - Run: INSERT batch, then the one-line verify query in the same file
 - Switch: browser refresh
