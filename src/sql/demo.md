@@ -36,7 +36,7 @@
 - Beat 5 (5:00-6:30)
   - Tool: VS Code editor + Copilot Chat (agent mode) + Browser
   - Open file: `src/sql/azure/hosting/dab/dab-config.json`
-  - Do: Show `runtime.rest` + `runtime.mcp`; new chat; select `live-site-sql`; run `Mitigate incident 5012 @live-site-sql`; switch to browser and show mitigation.
+  - Do: Show `runtime.rest` + `runtime.mcp`; new chat; select `live-site-sql`; run `Mitigate incident 5012 @live-site-sql`; after the response, show Chat Debug View with tool-call trace; switch to browser and show mitigation.
   - Say: "Grounded plan from corpus + live diagnostics in one loop."
 
 - Beat 6 (6:30-7:00)
@@ -77,6 +77,10 @@ Total: 7:00. *(Beat 3 reclaimed 1:30 from the old slow→fast version — spend 
 
 ## Stage runbook (concise, do this live)
 
+Quick rehearsal shortcut (manual agent test):
+
+- Run `./Reset-AgentTestState.ps1` from `src/sql/local/` to reset and reinsert incident 5012 in one command before Beat 5.
+
 1. **Beat 0 (Browser):** Run `./Open-LiveSite.ps1`.
   - Tool: Browser
   - Show: empty/placeholder state for incident 5012.
@@ -113,7 +117,7 @@ Total: 7:00. *(Beat 3 reclaimed 1:30 from the old slow→fast version — spend 
 7. **Beat 5b (Copilot Chat agent mode):** Run mitigation loop.
   - Tool: GitHub Copilot Chat (agent mode)
   - Action: select `live-site-sql` agent and run prompt: `Mitigate incident 5012 @live-site-sql`
-  - Show: tool sequence (`hybrid_search`, `dx_*`, `generate_mitigation`).
+  - Show: tool sequence (`hybrid_search`, `dx_*`, `generate_mitigation`) in Chat Debug View after the agent response.
 
 8. **Beat 5c (Browser):** Confirm page lights up.
   - Tool: Browser
@@ -191,7 +195,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
   - Open a **new chat**
   - Select agent `live-site-sql`
   - Run prompt: `Mitigate incident 5012 @live-site-sql`
-  - Keep Chat Debug view ON during tool calls
+  - After the response lands, open Chat Debug View and point to the tool-call trace
 - Show: tool sequence (`hybrid_search`, `dx_index_exists`, `dx_resource_pressure`, `dx_deadlock_recent`, `generate_mitigation`)
 - Switch: browser
 - Show: mitigation summary, citations, diagnostics badge
