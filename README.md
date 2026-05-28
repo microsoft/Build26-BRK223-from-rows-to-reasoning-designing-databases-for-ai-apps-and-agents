@@ -43,7 +43,7 @@ Once your content is in the repo, use these three phrases with Copilot to build 
 
 ### Session Description
 
-AI applications and agents require data platforms designed for reasoning, not just transactions. Traditional architectures force developers to stitch data systems together, adding latency and complexity. In this demo-rich session, we'll show the latest innovations in **SQL Database** and **Cosmos DB**, then build an app on **Azure HorizonDB**, Azure's new cloud-native PostgreSQL service, to show how AI apps built directly in the database simplify design and enable reasoning over operational data.
+AI applications and agents require data platforms designed for reasoning, not just transactions. Traditional architectures force developers to stitch data systems together, adding latency and complexity. In this demo-rich session, we'll show the latest innovations in **SQL Database** and **Azure Cosmos DB**, then build an app on **Azure HorizonDB**, Azure's new cloud-native PostgreSQL service, to show how AI apps built directly in the database simplify design and enable reasoning over operational data.
 
 ### 🎬 Demos in this repo
 
@@ -52,7 +52,7 @@ Each demo is self-contained under `src/`. Open the demo's README for prerequisit
 | Demo | What it shows | Status |
 |---|---|---|
 | **[Azure SQL — From Database to Live Site, with AI Agents in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
-| **Cosmos DB** | *Coming soon.* | 🚧 In progress |
+| **[Azure Cosmos DB — Agent Memory Demo](src/cosmosdb/README.md)** | A support-ticket agent memory demo using Azure Cosmos DB, Foundry, and Azure Durable Functions to show a serverless architecture + SDK for efficient memory storage, processing, and retrieval. | ✅ Available |
 | **[Azure HorizonDB — Zava Designer Agent](src/horizondb/README.md)** | AI Pipelines (`ai.create_pipeline`) + hybrid search (`ai.search` with BM25 + DiskANN + reranking) + Apache AGE graph traversal + LLM calls (`azure_ai.generate`, `azure_ai.rank`) — all inside one Postgres database. A React + Express app runs a 6-tool agent pipeline against HorizonDB to design a room from a 100K product catalog. | 🚧 In progress |
 
 ### 🏫 Getting started in a guided session
@@ -66,7 +66,7 @@ To follow along in the room:
 
 If you're following at your own pace, each demo has its own quick-start:
 - **SQL:** [src/sql/README.md](src/sql/README.md) — Windows 11 + Docker Desktop + .NET 10 + PowerShell 7. Cold build ~12–15 min.
-- **Cosmos DB:** coming soon.
+- **Cosmos DB:** [src/cosmosdb/README.md](src/cosmosdb/README.md) - Azure Cosmos DB for NoSQL + Micrsoft Foundry + Azure Durable Functions (optional).
 - **HorizonDB:** coming soon.
 
 ### 🧠 Learning Outcomes

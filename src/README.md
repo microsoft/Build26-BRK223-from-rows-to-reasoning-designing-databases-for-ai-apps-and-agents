@@ -7,7 +7,7 @@ Source code and demo assets for **BRK223 — From rows to reasoning: Designing d
 | Path | What it is | Status |
 |---|---|---|
 | [sql/](sql/README.md) | **Azure SQL — From Database to Live Site, with AI Agents in the Loop.** Local single-container build (SQL + Ollama + Caddy) + Blazor WASM page + Data API Builder REST/MCP + custom `live-site-sql` Copilot agent. Also includes the matching Azure cloud lift (Hyperscale + AOAI + APIM + Content Safety + ACA + SWA). | ✅ Available |
-| `cosmosdb/` | Cosmos DB demo. | 🚧 Coming soon |
+| [cosmosdb/](cosmosdb/README.md) | **Azure Cosmos DB — Agent memory for support workflows.** Support Engineer Agent demo using Agent Memory Toolkit to store , process, and retrieve memories to build derived user context across tickets. | ✅ Available |
 | `horizondb/` | Azure HorizonDB (PostgreSQL) demo. | 🚧 Coming soon |
 
 ## Where to start
