@@ -53,13 +53,13 @@ Each demo is self-contained under `src/`. Open the demo's README for prerequisit
 |---|---|---|
 | **[Azure SQL — From Database to Live Site, with AI Agents in the Loop](src/sql/README.md)** | Vector + JSON + REGEXP + ledger + `CREATE EXTERNAL MODEL` + `sp_invoke_external_rest_endpoint` + DiskANN + JSON indexes, all in one schema. A Blazor page polls Data API Builder REST every 2 s; a custom Copilot agent reaches the same DB over MCP to triage an incident and write a mitigation back — which the page then renders live. | ✅ Available |
 | **[Azure Cosmos DB — Agent Memory Demo](src/cosmosdb/README.md)** | A support-ticket agent memory demo using Azure Cosmos DB, Foundry, and Azure Durable Functions to show a serverless architecture + SDK for efficient memory storage, processing, and retrieval. | ✅ Available |
-| **[Azure HorizonDB — Zava Designer Agent](src/horizondb/README.md)** | AI Pipelines (`ai.create_pipeline`) + hybrid search (`ai.search` with BM25 + DiskANN + reranking) + Apache AGE graph traversal + LLM calls (`azure_ai.generate`, `azure_ai.rank`) — all inside one Postgres database. A React + Express app runs a 6-tool agent pipeline against HorizonDB to design a room from a 100K product catalog. | 🚧 In progress |
+| **[Azure HorizonDB — Zava Designer Agent](src/horizondb/README.md)** | AI Pipelines (`ai.create_pipeline`) + hybrid search (`ai.search` with BM25 + DiskANN + reranking) + Apache AGE graph traversal + LLM calls (`azure_ai.generate`, `azure_ai.rank`) — all inside one Postgres database. A React + Express app runs a 6-tool agent pipeline against HorizonDB to design a room from a 100K product catalog. | ✅ Available |
 
 ### 🏫 Getting started in a guided session
 
 To follow along in the room:
 - Watch the SQL demo land its data-platform features against the overarching story (operational data → grounding → agent reasoning).
-- Note where the Cosmos DB and HorizonDB demos will pick up the same story — those demos are in development and will land in this repo before they show on stage.
+- Compare how Cosmos DB and HorizonDB pick up the same story with different data platform patterns.
 - Grab the QR code on the closing slide to clone this repo and try the SQL demo at home today.
 
 ### 🏠 Getting started in your own environment
@@ -67,7 +67,7 @@ To follow along in the room:
 If you're following at your own pace, each demo has its own quick-start:
 - **SQL:** [src/sql/README.md](src/sql/README.md) — Windows 11 + Docker Desktop + .NET 10 + PowerShell 7. Cold build ~12–15 min.
 - **Cosmos DB:** [src/cosmosdb/README.md](src/cosmosdb/README.md) - Azure Cosmos DB for NoSQL + Micrsoft Foundry + Azure Durable Functions (optional).
-- **HorizonDB:** coming soon.
+- **HorizonDB:** [src/horizondb/README.md](src/horizondb/README.md) — Azure HorizonDB + Node.js 18+ + product data loaded, then follow Quick Start to run the Zava Designer Agent.
 
 ### 🧠 Learning Outcomes
 
@@ -75,7 +75,7 @@ By the end of this session, you will be able to:
 
 - Recognize when an AI app's bottleneck is the database design, not the model.
 - Understand how **Azure SQL Database** expresses vectors, JSON, and AI directly in the engine — `vector(N)` + DiskANN, JSON type + JSON indexes, `CREATE EXTERNAL MODEL`, `AI_GENERATE_EMBEDDINGS`, `sp_invoke_external_rest_endpoint`, append-only ledger.
-- Preview the same story landing on **Azure Cosmos DB** and **Azure HorizonDB** (those demos are coming — see the Demos table above).
+- Compare how the same reasoning-centric app pattern is implemented across **Azure SQL Database**, **Azure Cosmos DB**, and **Azure HorizonDB**.
 - Ground a Copilot agent in a live database via MCP, with grounding files (`.agent.md` + `SKILL.md`) that VS Code Copilot Chat discovers automatically.
 
 ### 💬 Keep Learning with Copilot
@@ -84,7 +84,7 @@ Try these prompts with GitHub Copilot to explore the topics from this session. O
 
 Use these as a starting point — or write your own!
 
-- *"Compare how Azure SQL Database, Azure Cosmos DB, and Azure HorizonDB each store and query vector embeddings. When would I pick each?"* (background reading until the Cosmos / HorizonDB demos land)
+- *"Compare how Azure SQL Database, Azure Cosmos DB, and Azure HorizonDB each store and query vector embeddings. When would I pick each?"*
 - *"Show me the syntax for `CREATE EXTERNAL MODEL` in Azure SQL and what `MODEL_TYPE` / `API_FORMAT` values are valid."*
 - *"How do I expose a database to an AI agent via MCP using Data API Builder?"*
 - *"What does 'AI built directly in the database' mean for an agent that needs to reason over operational data with low latency?"*
