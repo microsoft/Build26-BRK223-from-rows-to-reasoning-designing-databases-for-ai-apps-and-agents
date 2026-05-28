@@ -8,33 +8,38 @@
   - Do: Show empty state.
   - Say: "One SQL row will light up this page."
 
-2. Beat 1 (0:20-2:00)
+2. Beat 1a (0:20-1:00)
   - Tool: VS Code + MSSQL extension
   - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
+  - Do: Right-click connection -> Visualize and Design Schema; ask embedded Copilot Chat to describe the schema.
+  - Say: "Six demo tables, one data story."
+
+3. Beat 1b (1:00-2:00)
+  - Tool: VS Code + MSSQL extension
   - Open file: `src/sql/local/sqlscripts/05_create_incident.sql`
   - Do: Run INSERT, run verify, refresh browser.
   - Say: "JSON + regex + embeddings in one statement."
 
-3. Beat 2 (2:00-3:00)
+4. Beat 2 (2:00-3:00)
   - Tool (run): VS Code + MSSQL extension
   - Tool (plan): SSMS Actual Execution Plan
   - Open file: `src/sql/local/sqlscripts/06_hybrid_search.sql`
   - Do: Run proc; in SSMS point to `Vector Index Seek` (`vec_archive_embedding`) and `Index Seek` (`ix_runbook_tags`).
   - Say: "One query, two index families; SSMS is used because VS Code plan rendering is inconsistent for vector operators."
 
-4. Beat 3 (4:30-5:00)
+5. Beat 3 (4:30-5:00)
   - Tool: VS Code + MSSQL extension
   - Open file: `src/sql/local/sqlscripts/07_log_timeline.sql`
   - Do: Run timeline query for incident 5012.
   - Say: "Tamper-evident ledger timeline, no external pipeline."
 
-5. Beat 4 (5:00-6:30)
+6. Beat 4 (5:00-6:30)
   - Tool: VS Code editor + Copilot Chat (agent mode) + Browser
   - Open file: `src/sql/azure/hosting/dab/dab-config.json`
   - Do: Show `runtime.rest` + `runtime.mcp`; new chat; select `live-site-sql`; run `Mitigate incident 5012 @live-site-sql`; switch to browser and show mitigation.
   - Say: "Grounded plan from corpus + live diagnostics in one loop."
 
-6. Beat 5 (6:30-7:00)
+7. Beat 5 (6:30-7:00)
   - Tool: VS Code editor split + MSSQL extension (Hyperscale)
   - Open files:
     - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
@@ -59,7 +64,8 @@
 | # | Beat | Time | Window | Audience sees |
 |---|---|---|---|---|
 | 0 | Open on the website | 0:00–0:20 | Browser | Zava On-Call Console: SEV1 banner red, incident #5012 ACTIVE, AlertPayload empty / chips empty / AI panel empty ("No mitigation yet…"). *"For the next six minutes I'll show you the SQL that makes this page real."* |
-| 1 | Schema check + five-feature INSERT → refresh page | 0:20–2:00 | MSSQL ext (Visualize and Design Schema + Copilot Chat) + editor + browser refresh | (a) Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables; open the embedded **Copilot Chat** and ask it to describe the schema in English. (b) Inline INSERT in `05_create_incident.sql`. Then alt-tab to browser, refresh: AlertPayload populates, three regex-derived chips light up, embedding-length verify in editor |
+| 1a | Schema check (designer + Copilot Chat) | 0:20–1:00 | MSSQL ext (Visualize and Design Schema + Copilot Chat) | Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables; open embedded **Copilot Chat** and ask it to describe the schema in English. |
+| 1b | Five-feature INSERT → refresh page | 1:00–2:00 | MSSQL ext + editor + browser refresh | Inline INSERT in `05_create_incident.sql`. Then alt-tab to browser, refresh: AlertPayload populates, three regex-derived chips light up, embedding-length verify in editor. |
 | 2 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (run query) + SSMS (plan view) | Run `06_hybrid_search.sql`, then show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
 | 3 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
 | 4 | DAB → MCP → SKILL-driven agent loop → page lights up | 5:00–6:30 | `dab-config.json` + Copilot Chat (agent mode, SKILL attached) + browser | (a) Show `dab-config.json`: REST + MCP from one config; `GenerateMitigation` + the three `dx_*` procs are stored-proc entities. (b) Copilot Chat: select `live-site-sql` agent, type *"Mitigate incident 5012 `@live-site-sql`"* (the `@`-mention forces deterministic skill load — own the choice on stage, see Beat 4(b)). The agent runs the protocol — hybrid_search → dx_index_exists / dx_resource_pressure / dx_deadlock_recent → generate_mitigation (with @DiagnosticsJson) → read back. (c) Alt-tab to browser — AI panel populates with summary, steps, citations, plus a "validated by 3 live diagnostics" badge |
@@ -138,7 +144,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 - Show: empty state (no mitigation yet, placeholder chips/fields)
 - Say: *"This is the on-call console. In 30 seconds, one SQL INSERT will light up this page."*
 
-### Beat 1 — Schema check + INSERT (1:30)
+### Beat 1a + 1b — Schema check then INSERT (1:40)
 
 - Tool: VS Code + MSSQL extension
 - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
