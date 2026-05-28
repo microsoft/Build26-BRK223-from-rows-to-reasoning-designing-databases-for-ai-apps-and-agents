@@ -164,6 +164,8 @@ Returns top-3 prior incidents + top-3 runbook chunks as a result set the agent u
 
 ## 9. On-stage flow
 
+Rehearsal helper: run `src/sql/local/Reset-AgentTestState.ps1` to reset and reinsert incident 5012 in one command before manual agent testing.
+
 1. Sev1 alert lands → incident row inserted (the five-feature INSERT in §6).
 2. Engineer types: *"Zava payroll job failing since 14:30 UTC. Sev1, payday is tomorrow. Errors mention `Msg 1205 deadlock victim` and `tax-svc-3.zava.io 504`. Last successful run was on `payroll-engine v8.12.1`."*
 3. Agent calls `HybridSearch(tenantId='zava', question=...)` → top-3 prior incidents + top-3 runbook chunks, all tenant-scoped.
