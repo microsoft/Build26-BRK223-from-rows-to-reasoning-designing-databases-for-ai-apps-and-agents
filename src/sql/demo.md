@@ -54,19 +54,6 @@
 >
 > Last update: 2026-05-08
 
----
-
-## Cuts (do not attempt on stage)
-
-- ❌ Live `CREATE VECTOR INDEX` (100-row min, slow, boring) — pre-built.
-- ❌ Building schema / DAB config / EXTERNAL MODEL — pre-deployed before doors open.
-- ❌ **Separate .NET Zava On-Call Console (custom backend).** The frontend lives, but as a Blazor WASM app served by the Aspire AppHost — no custom HTTP backend. Reads DAB REST directly. **(2)** GitHub Copilot Chat in agent mode talks to the same DAB over HTTP MCP. Same architecture (`agent → MCP → DAB → SQL` and `browser → REST → DAB → SQL`), one fewer process to babysit, no hotel-wifi risk for the front-end.
-- ❌ VS Code graphical plan for vector operators (known rendering issue). Use SSMS for Beat 2 actual plan.
-- ❌ Two incidents (inline INSERT *and* .NET POST) — keep just the inline INSERT.
-- ❌ **`sp_invoke_external_rest_endpoint` as a standalone beat.** It's *in the demo* — inside `usp_GenerateMitigation`, which DAB exposes as a stored-procedure MCP tool the agent calls. We don't run `sp_invoke` from the editor; we let the proc do it.
-
----
-
 ## The flow
 
 | # | Beat | Time | Window | Audience sees |

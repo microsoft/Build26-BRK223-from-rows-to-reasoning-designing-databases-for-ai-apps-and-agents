@@ -155,7 +155,7 @@ if (-not $SqlImage) {
 No SQL image specified. Pass -SqlImage or set `$env:BRK223_SQL_IMAGE.
 Examples:
   -SqlImage 'mcr.microsoft.com/mssql/server:2025-latest'                                    # public SQL Server 2025
-  -SqlImage 'sqlbuilds.azurecr.io/mssql-p-adhoc/.../developer-edition:<tag>'                # private Azure SQL preview (Microsoft only)
+    -SqlImage '<private-preview-image-from-session-owner>'                                     # private Azure SQL preview (Microsoft only)
 See the BRK223 README for the differences between the two.
 "@
 }

@@ -60,14 +60,14 @@ In cloud (Azure SQL Hyperscale), the same DDL points at Azure OpenAI `text-embed
 
 | Side | Index used | Why |
 |---|---|---|
-| `IncidentArchive` (~150k rows, weakly tagged) | **DiskANN Vector Index Seek** via `VECTOR_SEARCH(... METRIC = 'cosine')` with `TOP (@k) WITH APPROXIMATE` | Approximate nearest neighbor over a large corpus; structured filters (`TenantId`, `errorCode`) run as residual predicates on the bookmark side. |
+| `IncidentArchive` (~150k rows, weakly tagged) | **DiskANN Vector Index Seek** via `VECTOR_SEARCH(... METRIC = 'cosine')` with `TOP (@k)` | Approximate nearest neighbor over a large corpus; structured filters (`TenantId`, `errorCode`) run as residual predicates on the bookmark side. |
 | `Runbook` (~20 docs / ~6k chunks, well tagged) | **JSON Index Seek** on `Tags ($.service)`, then exact `vector_distance('cosine', ...)` over the chunks | Structured filter narrows the candidate set to a few dozen rows — DiskANN isn't worth it on that size. |
 
 Both halves merge in a single result set ordered by cosine distance. The proc body is in [local/sqlscripts/01_schema.sql](local/sqlscripts/01_schema.sql); the demo invocation is [local/sqlscripts/06_hybrid_search.sql](local/sqlscripts/06_hybrid_search.sql).
 
 ```sql
 -- DiskANN side
-SELECT TOP (@k) WITH APPROXIMATE ...
+SELECT TOP (@k) ...
 FROM   VECTOR_SEARCH(
          TABLE = dbo.IncidentArchive AS a,
          COLUMN = Embedding,
@@ -172,7 +172,7 @@ Scripts are PowerShell unless noted. Run them from `src/sql/local/`.
 | Purpose | Scripts |
 |---|---|
 | **Bootstrap (run once)** | [`Build.ps1`](local/Build.ps1) — one-shot 13-step setup: build the SQL+AI container image, start it, deploy schema/corpus/embeddings, build the .NET solution. [`Verify-Build.ps1`](local/Verify-Build.ps1) — post-build smoke checks. |
-| **Demo lifecycle** | [`Start-LiveSite.ps1`](local/Start-LiveSite.ps1) / [`Stop-LiveSite.ps1`](local/Stop-LiveSite.ps1) — start/stop the Aspire AppHost (Blazor WASM + DAB). [`Open-LiveSite.ps1`](local/Open-LiveSite.ps1) — open the browser to the running page. [`Prep-Demo.ps1`](local/Prep-Demo.ps1) — pre-stage everything immediately before going on stage. |
+| **Demo lifecycle** | [`Prepare-DemoEnvironment.ps1`](local/Prepare-DemoEnvironment.ps1) — single-command prep for both fresh and existing machines (build/provision, reset DB state, warm AI, verify health, then optionally start the app). [`Start-LiveSite.ps1`](local/Start-LiveSite.ps1) / [`Stop-LiveSite.ps1`](local/Stop-LiveSite.ps1) — start/stop the Aspire AppHost (Blazor WASM + DAB). [`Open-LiveSite.ps1`](local/Open-LiveSite.ps1) — open the browser to the running page. |
 | **On-stage actions** | [`Insert-Incident.ps1`](local/Insert-Incident.ps1) — Beat 1: fire the five-feature INSERT that creates incident 5012. [`Generate-Mitigation.ps1`](local/Generate-Mitigation.ps1) — Beat 4 fallback if you want to run mitigation from the shell instead of from the agent. |
 | **Reset between rehearsals** | [`Reset-ForBeat2.ps1`](local/Reset-ForBeat2.ps1) — rewind to the "just after incident landed" state. [`Reset-Incident.ps1`](local/Reset-Incident.ps1) — wipe 5012 and re-seed. [`Teardown-LiveSite.ps1`](local/Teardown-LiveSite.ps1) — remove the container entirely. |
 | **Container internals** | [`Start-AzureSqlContainer.ps1`](local/Start-AzureSqlContainer.ps1) — bring up the SQL container (called by `Build.ps1`; runnable on its own). [`Prepare-AiContainer.ps1`](local/Prepare-AiContainer.ps1) — install Ollama + Caddy and pull the embedding/chat models inside the container. [`Restart-AiServices.ps1`](local/Restart-AiServices.ps1) / [`Warmup-Ai.ps1`](local/Warmup-Ai.ps1) — kick the AI side awake before a run. |
@@ -329,14 +329,17 @@ These features are available in both Azure SQL preview and SQL Server 2025:
 cd src/sql/local
 
 # Tell Build.ps1 which SQL image to use. Required — no default.
-# Public path:
-$env:BRK223_SQL_IMAGE = 'mcr.microsoft.com/mssql/server:2025-latest'
-# (Microsoft-internal Azure SQL preview path goes here instead, if you have access.)
+# Recommended for this demo (Microsoft-internal Azure SQL preview path):
+$env:BRK223_SQL_IMAGE = '<private-preview-image-from-session-owner>'
+# Optional: persist for future terminals so image auto-selection stays stable.
+[Environment]::SetEnvironmentVariable('BRK223_SQL_IMAGE', $env:BRK223_SQL_IMAGE, 'User')
+# Public fallback path (not feature-identical for all scripts):
+# $env:BRK223_SQL_IMAGE = 'mcr.microsoft.com/mssql/server:2025-latest'
 
 # Required — no defaults. Used by Build.ps1, deploy-prestage.ps1,
 # Start-AzureSqlContainer.ps1, Generate-Mitigation.ps1, Insert-Incident.ps1,
 # Reset-Incident.ps1, Reset-ForBeat2.ps1, Verify-Build.ps1,
-# Test-AzureSqlConnection.ps1, Prep-Demo.ps1. Pick strong values — no demo
+# Test-AzureSqlConnection.ps1, Prepare-DemoEnvironment.ps1. Pick strong values — no demo
 # defaults are baked into the scripts.
 $env:BRK223_SA_PASSWORD       = '<sa password>'           # SQL container SA
 $env:BRK223_SQLADMIN_PASSWORD = '<sqladmin password>'     # app login the demo uses
@@ -345,13 +348,9 @@ $env:BRK223_SQLADMIN_PASSWORD = '<sqladmin password>'     # app login the demo u
 # Must match the sqladmin password above.
 $env:BRK223_SQL_CONNECTION_STRING = "Server=host.docker.internal,14330;Database=zavalivesitedb;User Id=sqladmin;Password=$env:BRK223_SQLADMIN_PASSWORD;TrustServerCertificate=True;Encrypt=True;Command Timeout=180"
 
-.\Build.ps1
+.\Prepare-DemoEnvironment.ps1
 # Cold run: ~12-15 min (image pull + Ollama model pull + corpus embed + dotnet build)
-# Warm run: ~30 sec (everything probed and skipped)
-
-.\Verify-Build.ps1     # health check — green = ready
-.\Start-LiveSite.ps1   # Aspire AppHost: DAB on :8765/mcp + Blazor WASM on :8080
-.\Open-LiveSite.ps1    # opens http://localhost:8080 in the default browser
+# Warm run: ~30-90 sec (already-installed components are detected/skipped)
 ```
 
 You should see the **empty-state** Zava On-Call Console (no SEV1 banner,

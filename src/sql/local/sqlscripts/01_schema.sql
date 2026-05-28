@@ -242,7 +242,7 @@ BEGIN
     DECLARE @lService   nvarchar(50)  = @Service;
     DECLARE @lTopK      int           = @TopK;
 
-    -- Top prior incidents (approximate ANN via VECTOR_SEARCH)
+    -- Top prior incidents via VECTOR_SEARCH over the archive embeddings.
     DECLARE @incidents TABLE (
         source    nvarchar(20),
         id        nvarchar(60),
@@ -253,7 +253,7 @@ BEGIN
     );
 
     INSERT @incidents (source, id, title, body, distance, extra)
-    SELECT TOP (@lTopK) WITH APPROXIMATE
+    SELECT TOP (@lTopK)
            N'incident',
            CAST(a.IncidentId AS nvarchar(60)),
            a.Service + N' / ' + ISNULL(a.Severity, N''),

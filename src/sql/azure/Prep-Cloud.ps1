@@ -3,7 +3,7 @@
     Idempotent end-to-end stand-up of the BRK223 Azure variant.
 
 .DESCRIPTION
-    Counterpart to local/Prep-Demo.ps1. Targets the Azure stack that Bicep
+    Counterpart to local/Prepare-DemoEnvironment.ps1. Targets the Azure stack that Bicep
     deploys (Hyperscale + AOAI + APIM + Content Safety + role assignments).
     Run anytime before showtime; safe to re-run.
 

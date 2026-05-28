@@ -142,7 +142,7 @@ GO
   --
   -- DEV-TEAM NOTE (Bob Ward, May 12 2026):
   --   sys.dm_db_resource_stats is NOT exposed by the local Azure SQL Database
-  --   container image we ship for BRK223 (sqldb-dev-edition-nomiaa-3j:18.0.161_2_8).
+    --   container image we ship for BRK223 (private preview image).
   --   Querying it returns 42S02 "Invalid object name 'sys.dm_db_resource_stats'."
   --   even though @@VERSION reports EngineEdition=5 (Azure SQL DB). This is a
   --   surface-area gap in the dev-edition container; the DMV exists in the

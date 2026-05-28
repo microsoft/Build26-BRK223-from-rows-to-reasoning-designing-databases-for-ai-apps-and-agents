@@ -133,6 +133,11 @@ and explain in the rollout_plan rationale. Examples:
   - dx_deadlock_recent.finding = ''no_deadlock_history''
       → cap confidence.overall at ''medium'' and note the symptom may already be mitigated.
 
+Use LIVE DIAGNOSTICS for immediate action gating and ordering decisions. Do NOT
+ask for additional exploratory monitoring/diagnostic queries as preconditions when
+the supplied diagnostics already answer symptom-currentness and safety-to-change.
+Follow-up checks are still required, but only as post-change validation.
+
 Your job is to produce a JSON mitigation plan with THREE distinct contributions:
 
   1. cited_actions  — what to do. Take these directly from the prior incidents and runbooks.
@@ -142,10 +147,13 @@ Your job is to produce a JSON mitigation plan with THREE distinct contributions:
                       verify after each step. The "verify" string for each step MUST be grounded
                       in the PRIOR INCIDENTS or RUNBOOKS above — quote the DMV, XEvent session,
                       Query Store view, or Azure Monitor metric that those sources used to
-                      confirm the same class of fix. Do NOT invent verification artifacts; if
+                      confirm the same class of fix. Make each verify a concrete post-change check
+                      with: (a) exact metric/query, (b) success threshold/expected value, and
+                      (c) time window (for example: "within 10 minutes"). Do NOT invent verification artifacts; if
                       the corpus does not name one for a step, say "see runbook <id>" or
                       "per incident #<id>". This is Azure SQL Database, so anything the corpus
                       does not mention (SQL ERRORLOG, SSMS, Profiler, on-box files) is off-limits.
+                      Avoid generic wording like "monitor closely" or "run monitoring queries".
   3. confidence     — your honest assessment. Use "high" only when a prior incident matches the
                       symptom closely. Note any caveats.
 
@@ -155,7 +163,7 @@ Return ONLY this JSON shape (no prose outside the JSON):
     { "action": "<imperative sentence>", "source": "incident #<id>" | "runbook <id>" }
   ],
   "rollout_plan": [
-    { "step": <int>, "action": "<imperative sentence>", "rationale": "<why this order>", "verify": "<dmv/xevent/metric to check>" }
+    { "step": <int>, "action": "<imperative sentence>", "rationale": "<why this order>", "verify": "<exact post-change check with metric/query + threshold + time window>" }
   ],
   "blast_radius": {
     "tenants_affected": <int>,

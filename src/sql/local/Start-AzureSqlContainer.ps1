@@ -21,7 +21,7 @@
 
     Examples:
       -Image 'mcr.microsoft.com/mssql/server:2025-latest'
-      -Image 'sqlbuilds.azurecr.io/mssql-p-adhoc/mssql-server/developer-edition:9114_10212_3'
+            -Image '<private-preview-image-from-session-owner>'
     Or set $env:BRK223_SQL_IMAGE once for the session.
 
     The original BRK223 demo was authored against an Azure SQL preview image

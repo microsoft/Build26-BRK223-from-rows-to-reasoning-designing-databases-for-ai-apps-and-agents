@@ -124,10 +124,15 @@ BEGIN
 LIVE DIAGNOSTICS are GROUND TRUTH about the system at this moment. Follow them when they conflict
 with a runbook or prior incident, and explain in rationale.
 
+Use LIVE DIAGNOSTICS for immediate action gating and ordering decisions. Do NOT
+ask for additional exploratory monitoring/diagnostic queries as preconditions when
+the supplied diagnostics already answer symptom-currentness and safety-to-change.
+Follow-up checks are still required, but only as concrete post-change validation.
+
 Return ONLY this JSON shape (no prose outside the JSON):
 { "summary": "<2-3 sentences naming specific identifiers from alert/tags/runbooks>",
   "cited_actions": [ { "action": "...", "source": "incident #<id> | runbook <id>" } ],
-  "rollout_plan":  [ { "step": <int>, "action": "...", "rationale": "...", "verify": "..." } ],
+  "rollout_plan":  [ { "step": <int>, "action": "...", "rationale": "...", "verify": "<exact post-change check with metric/query + threshold + time window; no generic monitoring wording>" } ],
   "blast_radius":  { "tenants_affected": <int>, "active_incidents_same_service": <int>, "summary": "..." },
   "confidence":    { "overall": "low|medium|high", "notes": "..." } }';
 
