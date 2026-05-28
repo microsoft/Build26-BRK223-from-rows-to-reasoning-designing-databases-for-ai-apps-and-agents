@@ -25,7 +25,7 @@ SELECT ai.create_pipeline(
 
 SELECT ai.run('style_tagger');
 
--- SELECT ai.drop('style_tagger_maxim');
+-- SELECT ai.drop('style_tagger');
 
 -- ─── ACT 2: Create style graph ─────────────────────
 -- Create a graph from the style tagger output in the database, using setup/graph_setup.sql
@@ -38,12 +38,11 @@ SELECT ai.run('style_tagger');
 
 -- ─── ACT 3 setup: Flash style pipeline output (~1 min) ─────────────────────
 -- Show 5 rows — this is what feeds the graph
-SELECT title, extracted->'style' AS style, generated AS related_styles
+SELECT id, title, extracted->'style' AS style, generated AS related_styles
 FROM style_tagger_output LIMIT 5;
 
 -- Verify style distribution
 SELECT extracted->'style' AS style, COUNT(*) FROM style_tagger_output GROUP BY style ORDER BY count DESC;
-
 
 -- ─── ACT 3: Graph queries ──────────────────────────────────────────────────
 
@@ -78,24 +77,6 @@ $$) AS (seed agtype, e1 agtype, style agtype, e2 agtype, related agtype, e3 agty
 
 
 ----- Bonus: Cooler Graphs (if time) ------
--- "Which styles bridge the most categories?"
-SELECT * FROM ag_catalog.cypher('style_graph', $$
-    MATCH (p:Product)-[edge1:HAS_STYLE]->(s:Style),
-          (p)-[edge2:IN_CATEGORY]->(c:Category)
-    RETURN p, edge1, s, edge2, c
-$$) AS (p agtype, edge1 agtype, s agtype, edge2 agtype, c agtype);
-
--- "I picked this coffee table. What rugs, lamps, and chairs match its style?"
-SELECT * FROM ag_catalog.cypher('style_graph', $$
-    MATCH (seed:Product {id: 10414})-[e1:HAS_STYLE]->(s:Style)<-[e2:HAS_STYLE]-(recommendation:Product)
-    MATCH (seed)-[e3:IN_CATEGORY]->(seedCat:Category)
-    MATCH (recommendation)-[e4:IN_CATEGORY]->(recCat:Category)
-    MATCH (sibling:Product)-[e5:IN_CATEGORY]->(recCat)
-    WHERE seedCat.name <> recCat.name
-    RETURN seed, e1, s, e2, recommendation, e3, seedCat, e4, recCat, sibling, e5
-    LIMIT 20
-$$) AS (seed agtype, e1 agtype, style agtype, e2 agtype, recommendation agtype, e3 agtype, seedCat agtype, e4 agtype, recCat agtype, sibling agtype, e5 agtype);
-
 -- 1-HOP: Same style, cross-category
 -- ASCII art representation of the graph
 --        Product(2315)
@@ -119,3 +100,13 @@ SELECT * FROM ag_catalog.cypher('style_graph', $$
     RETURN seed, edge1, s, edge2, recommendation, edge3, seedCat, edge4, recCat
     LIMIT 10
 $$) AS (seed agtype, edge1 agtype, style agtype, edge2 agtype, recommendation agtype, edge3 agtype, seedCat agtype, edge4 agtype, recCat agtype);
+
+
+-- "Which styles bridge the most categories?"
+SELECT * FROM ag_catalog.cypher('style_graph', $$
+    MATCH (p:Product)-[edge1:HAS_STYLE]->(s:Style),
+          (p)-[edge2:IN_CATEGORY]->(c:Category)
+    RETURN p, edge1, s, edge2, c
+$$) AS (p agtype, edge1 agtype, s agtype, edge2 agtype, c agtype);
+
+

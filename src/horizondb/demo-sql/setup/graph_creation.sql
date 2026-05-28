@@ -47,9 +47,8 @@ DO $$
 DECLARE r RECORD; safe_cat TEXT;
 BEGIN
     SET search_path = ag_catalog, "$user", public, pgfts;
-    FOR r IN SELECT DISTINCT ps.category FROM product_sample ps
-             JOIN style_tagger_output sto ON ps.id = sto.id
-             WHERE ps.category IS NOT NULL
+    FOR r IN SELECT DISTINCT category FROM style_tagger_output
+             WHERE category IS NOT NULL
     LOOP
         safe_cat := replace(r.category, '''', '\''');
         EXECUTE format(
@@ -64,9 +63,8 @@ DO $$
 DECLARE r RECORD; safe_cat TEXT;
 BEGIN
     SET search_path = ag_catalog, "$user", public, pgfts;
-    FOR r IN SELECT sto.id, ps.category FROM style_tagger_output sto
-             JOIN product_sample ps ON ps.id = sto.id
-             WHERE ps.category IS NOT NULL
+    FOR r IN SELECT id, category FROM style_tagger_output
+             WHERE category IS NOT NULL
     LOOP
         safe_cat := replace(r.category, '''', '\''');
         EXECUTE format(

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ai.search() — Unified Multi-Modal Search for PostgreSQL
+-- ai.search_orig() — Unified Multi-Modal Search for PostgreSQL
 -- Azure Database for PostgreSQL
 -- =============================================================================
 --
@@ -7,12 +7,12 @@
 -- and hybrid search (vector + fulltext fused via Reciprocal Rank Fusion).
 --
 -- Usage:
---   SELECT * FROM ai.search('how do I scale PostgreSQL?');
---   SELECT * FROM ai.search('replication lag', search_type => 'fulltext');
---   SELECT * FROM ai.search('backup strategy', search_type => 'vector');
---   SELECT * FROM ai.search('disaster recovery', top_k => 5);
---   SELECT * FROM ai.search('vector index', rerank => false);
---   SELECT * FROM ai.search('RAG pipeline',
+--   SELECT * FROM ai.search_orig('how do I scale PostgreSQL?');
+--   SELECT * FROM ai.search_orig('replication lag', search_type => 'fulltext');
+--   SELECT * FROM ai.search_orig('backup strategy', search_type => 'vector');
+--   SELECT * FROM ai.search_orig('disaster recovery', top_k => 5);
+--   SELECT * FROM ai.search_orig('vector index', rerank => false);
+--   SELECT * FROM ai.search_orig('RAG pipeline',
 --       embedding_model => 'text-embedding-3-large',
 --       rerank_model    => 'gpt-4.1');
 --
@@ -35,8 +35,8 @@ CREATE EXTENSION IF NOT EXISTS pg_diskann;
 
 SET search_path = public, pgfts, "$user";
 
-SELECT azure_ai.set_setting('azure_openai.endpoint', 'https://XXXXX.openai.azure.com/');
-SELECT azure_ai.set_setting('azure_openai.subscription_key', '');
+-- SELECT azure_ai.set_setting('azure_openai.endpoint', 'https://XXXXX.openai.azure.com/');
+-- SELECT azure_ai.set_setting('azure_openai.subscription_key', '');
 
 
 CREATE SCHEMA IF NOT EXISTS ai;
@@ -102,7 +102,7 @@ INSERT INTO knowledge_base (title, content, category) VALUES
 -- ---------------------------------------------------------------------------
 UPDATE knowledge_base
 SET embedding = azure_openai.create_embeddings(
-    'text-embedding-3-small', content
+    'default-embedding', content
 )::vector
 WHERE embedding IS NULL;
 
@@ -112,19 +112,20 @@ WHERE embedding IS NULL;
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 -- BM25 full-text index (pg_fts)
-CREATE INDEX kb_content_bm25_idx ON knowledge_base USING fts (content text_fts_ops);
+CREATE INDEX IF NOT EXISTS kb_content_bm25_idx
+    ON public.knowledge_base USING fts (content pgfts.text_fts_ops);
 
 -- DiskANN vector index (pgvector) — cosine distance
 CREATE INDEX kb_embedding_diskann_idx ON knowledge_base
     USING diskann (embedding vector_cosine_ops);
 
--- Reciprocal Rank Fusion (RRF) is applied inline inside ai.search.
+-- Reciprocal Rank Fusion (RRF) is applied inline inside ai.search_orig.
 -- RRF formula:  score(d) = Σ  1 / (k + rank_i(d))
 -- where k = 60 (standard constant), and i iterates over each ranker.
 
 
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
--- SECTION 3: ai.search()  — The Main Entry Point
+-- SECTION 3: ai.search_orig()  — The Main Entry Point
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 --
 -- Parameters:
@@ -137,7 +138,7 @@ CREATE INDEX kb_embedding_diskann_idx ON knowledge_base
 --   embedding_column text   — column for vector search (auto-detected from vector index)
 --   id_column        text   — primary key column (auto-detected)
 --   title_column     text   — display label column (defaults to content_column)
---   embedding_model  text   — model for embeddings (default 'text-embedding-3-small')
+--   embedding_model  text   — model for embeddings (default 'default-embedding')
 --   rerank_model     text   — model for reranking (default 'gpt-4.1')
 --   rerank           bool   — apply cross-encoder reranking (default false)
 --   filter           text   — optional SQL WHERE clause fragment for pre-filtering
@@ -160,11 +161,11 @@ CREATE INDEX kb_embedding_diskann_idx ON knowledge_base
 --   4. Return top_k results
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-DROP FUNCTION IF EXISTS ai.search(text, text, int, int, int, text, text, boolean);
-DROP FUNCTION IF EXISTS ai.search(text, text, text, int, int, int, text, text, text, text, text, text, boolean);
-DROP FUNCTION IF EXISTS ai.search(text, text, text, int, int, text, text, text, text, text, text, boolean);
-DROP FUNCTION IF EXISTS ai.search(text, text, text, int, int, text, text, text, text, text, text, boolean, text);
-CREATE OR REPLACE FUNCTION ai.search(
+DROP FUNCTION IF EXISTS ai.search_orig(text, text, int, int, int, text, text, boolean);
+DROP FUNCTION IF EXISTS ai.search_orig(text, text, text, int, int, int, text, text, text, text, text, text, boolean);
+DROP FUNCTION IF EXISTS ai.search_orig(text, text, text, int, int, text, text, text, text, text, text, boolean);
+DROP FUNCTION IF EXISTS ai.search_orig(text, text, text, int, int, text, text, text, text, text, text, boolean, text);
+CREATE OR REPLACE FUNCTION ai.search_orig(
     query            text,
     source_table     text    DEFAULT 'knowledge_base',
     search_type      text    DEFAULT 'hybrid',
@@ -174,8 +175,8 @@ CREATE OR REPLACE FUNCTION ai.search(
     embedding_column text    DEFAULT NULL,  -- auto-detected from vector index
     id_column        text    DEFAULT NULL,  -- auto-detected from primary key
     title_column     text    DEFAULT NULL,  -- defaults to content_column
-    embedding_model  text    DEFAULT 'text-embedding-3-small',
-    rerank_model     text    DEFAULT 'gpt-4.1',
+    embedding_model  text    DEFAULT 'default-embedding',
+    rerank_model     text    DEFAULT 'default-chat', -- defaults to GPT model as a reranker, more accurate, but slower
     rerank           boolean DEFAULT false,
     filter           text    DEFAULT NULL   -- optional WHERE clause fragment for pre-filtering
 )
@@ -203,10 +204,16 @@ DECLARE
     _content_col     text;
     _emb_col         text;
     _filter_clause   text;
+    _pgfts_preloaded boolean := false;
+    _has_valid_fts_index boolean := false;
+    _use_pgfts boolean := false;
 BEGIN
     _start_ts := clock_timestamp();
     _phase_ts := _start_ts;
     _tbl := source_table;
+
+    -- pg_fts BM25 can only be used when pg_fts is preloaded at server start.
+    _pgfts_preloaded := position('pg_fts' in current_setting('shared_preload_libraries', true)) > 0;
 
     -- Build filter clause
     IF filter IS NOT NULL THEN
@@ -218,7 +225,7 @@ BEGIN
     -- =================================================================
     -- Column Auto-Detection from Indexes
     -- =================================================================
-    -- Customers create their table with the right indexes and ai.search()
+    -- Customers create their table with the right indexes and ai.search_orig()
     -- figures out which columns to use. No configuration needed.
     --
     --   CREATE TABLE my_docs (
@@ -229,7 +236,7 @@ BEGIN
     --   CREATE INDEX ON my_docs USING fts (body text_fts_ops);     -- → content
     --   CREATE INDEX ON my_docs USING diskann (vec vector_cosine_ops); -- → embedding
     --
-    --   SELECT * FROM ai.search('query', source_table => 'my_docs');
+    --   SELECT * FROM ai.search_orig('query', source_table => 'my_docs');
     -- =================================================================
 
     -- Primary key → id_column
@@ -269,9 +276,9 @@ BEGIN
     -- Title defaults to content column if not specified
     _title_col := COALESCE(title_column, _content_col);
 
-    RAISE NOTICE '[ai.search] START  query=% type=% top_k=% rerank=%',
+    RAISE NOTICE '[ai.search_orig] START  query=% type=% top_k=% rerank=%',
         left(query, 80), search_type, top_k, rerank;
-    RAISE NOTICE '[ai.search] AUTO-DETECT  table=% id=% title=% content=% embedding=%',
+    RAISE NOTICE '[ai.search_orig] AUTO-DETECT  table=% id=% title=% content=% embedding=%',
         _tbl, _id_col, _title_col, _content_col, _emb_col;
 
     -- Validate we found what we need
@@ -279,7 +286,37 @@ BEGIN
         RAISE EXCEPTION 'No primary key on "%" — specify id_column.', _tbl;
     END IF;
     IF _content_col IS NULL AND search_type IN ('fulltext', 'hybrid') THEN
-        RAISE EXCEPTION 'No BM25 (fts) index on "%" — create one or specify content_column.', _tbl;
+        -- Fallback to a conventional text column for Postgres native full-text search.
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns c
+            WHERE c.table_schema = 'public'
+              AND c.table_name = _tbl
+              AND c.column_name = 'content'
+        ) THEN
+            _content_col := 'content';
+        ELSE
+            RAISE EXCEPTION 'No content column resolved for "%" — specify content_column.', _tbl;
+        END IF;
+    END IF;
+    IF search_type IN ('fulltext', 'hybrid') THEN
+        SELECT EXISTS (
+            SELECT 1
+            FROM pg_index i
+            JOIN pg_class ix ON ix.oid = i.indexrelid
+            JOIN pg_am am ON am.oid = ix.relam
+            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+            WHERE i.indrelid = _tbl::regclass
+              AND am.amname = 'fts'
+              AND a.attname = _content_col
+              AND i.indisvalid
+        ) INTO _has_valid_fts_index;
+
+        _use_pgfts := _pgfts_preloaded AND _has_valid_fts_index;
+        IF NOT _use_pgfts THEN
+            RAISE NOTICE '[ai.search_orig] pg_fts BM25 not usable for %.% (preloaded=%, valid_fts_index=%). Using PostgreSQL built-in full-text fallback.',
+                _tbl, _content_col, _pgfts_preloaded, _has_valid_fts_index;
+        END IF;
     END IF;
     IF _emb_col IS NULL AND search_type IN ('vector', 'hybrid') THEN
         RAISE EXCEPTION 'No vector index on "%" — create one or specify embedding_column.', _tbl;
@@ -299,9 +336,9 @@ BEGIN
 
     -- Generate query embedding when needed
     IF search_type IN ('vector', 'hybrid') THEN
-        RAISE NOTICE '[ai.search] Generating embedding via % ...', embedding_model;
+        RAISE NOTICE '[ai.search_orig] Generating embedding via % ...', embedding_model;
         query_embedding := azure_openai.create_embeddings(embedding_model, query)::vector;
-        RAISE NOTICE '[ai.search] Embedding done  (+% ms)',
+        RAISE NOTICE '[ai.search_orig] Embedding done  (+% ms)',
             extract(milliseconds from clock_timestamp() - _phase_ts)::int;
         _phase_ts := clock_timestamp();
     END IF;
@@ -330,7 +367,7 @@ BEGIN
             _emb_col
         ) USING query_embedding, fetch_limit;
         GET DIAGNOSTICS _candidate_cnt = ROW_COUNT;
-        RAISE NOTICE '[ai.search] Vector search found % candidates  (+% ms)',
+        RAISE NOTICE '[ai.search_orig] Vector search found % candidates  (+% ms)',
             _candidate_cnt, extract(milliseconds from clock_timestamp() - _phase_ts)::int;
         _phase_ts := clock_timestamp();
 
@@ -338,23 +375,46 @@ BEGIN
         -- ============================================================
         -- FULL-TEXT SEARCH: BM25 via pg_fts
         -- ============================================================
-        EXECUTE format(
-            'INSERT INTO _search_candidates
-             SELECT sub._id, sub._title, sub._content,
-                    (1.0 / sub.rn)::real, ''fulltext''::text
-             FROM (
-                 SELECT %I AS _id, %I AS _title, %I AS _content,
-                        ROW_NUMBER() OVER ()::int AS rn
-                 FROM %I
-                 WHERE %I OPERATOR(pgfts.@@?) %L' || _filter_clause || '
-                 LIMIT $1
-             ) sub',
-            _id_col, _title_col, _content_col,
-            _tbl,
-            _content_col, query
-        ) USING fetch_limit;
+        IF _use_pgfts THEN
+            EXECUTE format(
+                'INSERT INTO _search_candidates
+                 SELECT sub._id, sub._title, sub._content,
+                        (1.0 / sub.rn)::real, ''fulltext''::text
+                 FROM (
+                     SELECT %I AS _id, %I AS _title, %I AS _content,
+                            ROW_NUMBER() OVER ()::int AS rn
+                     FROM %I
+                     WHERE %I OPERATOR(pgfts.@@?) %L' || _filter_clause || '
+                     LIMIT $1
+                 ) sub',
+                _id_col, _title_col, _content_col,
+                _tbl,
+                _content_col, query
+            ) USING fetch_limit;
+        ELSE
+            EXECUTE format(
+                'INSERT INTO _search_candidates
+                 SELECT sub._id, sub._title, sub._content,
+                        sub._score, ''fulltext''::text
+                 FROM (
+                     SELECT %I AS _id, %I AS _title, %I AS _content,
+                            ts_rank_cd(
+                                to_tsvector(''english'', COALESCE(%I, '''')),
+                                plainto_tsquery(''english'', %L)
+                            )::real AS _score
+                     FROM %I
+                     WHERE to_tsvector(''english'', COALESCE(%I, '''')) @@ plainto_tsquery(''english'', %L)' || _filter_clause || '
+                     ORDER BY _score DESC
+                     LIMIT $1
+                 ) sub',
+                _id_col, _title_col, _content_col,
+                _content_col, query,
+                _tbl,
+                _content_col, query
+            ) USING fetch_limit;
+        END IF;
         GET DIAGNOSTICS _candidate_cnt = ROW_COUNT;
-        RAISE NOTICE '[ai.search] Fulltext search found % candidates  (+% ms)',
+        RAISE NOTICE '[ai.search_orig] Fulltext search found % candidates  (+% ms)',
             _candidate_cnt, extract(milliseconds from clock_timestamp() - _phase_ts)::int;
         _phase_ts := clock_timestamp();
 
@@ -367,16 +427,29 @@ BEGIN
         CREATE TEMP TABLE _fulltext_ranked (doc_id int, rank int) ON COMMIT DROP;
 
         -- Fulltext ranker
-        EXECUTE format(
-            'INSERT INTO _fulltext_ranked (doc_id, rank)
-             SELECT %I, ROW_NUMBER() OVER ()::int
-             FROM %I
-             WHERE %I OPERATOR(pgfts.@@?) %L' || _filter_clause || '
-             LIMIT $1',
-            _id_col, _tbl, _content_col, query
-        ) USING fetch_limit;
+        IF _use_pgfts THEN
+            EXECUTE format(
+                'INSERT INTO _fulltext_ranked (doc_id, rank)
+                 SELECT %I, ROW_NUMBER() OVER ()::int
+                 FROM %I
+                 WHERE %I OPERATOR(pgfts.@@?) %L' || _filter_clause || '
+                 LIMIT $1',
+                _id_col, _tbl, _content_col, query
+            ) USING fetch_limit;
+        ELSE
+            EXECUTE format(
+                'INSERT INTO _fulltext_ranked (doc_id, rank)
+                 SELECT %I, ROW_NUMBER() OVER (ORDER BY ts_rank_cd(to_tsvector(''english'', COALESCE(%I, '''')), plainto_tsquery(''english'', %L)) DESC)::int
+                 FROM %I
+                 WHERE to_tsvector(''english'', COALESCE(%I, '''')) @@ plainto_tsquery(''english'', %L)' || _filter_clause || '
+                 LIMIT $1',
+                _id_col, _content_col, query,
+                _tbl,
+                _content_col, query
+            ) USING fetch_limit;
+        END IF;
         GET DIAGNOSTICS _candidate_cnt = ROW_COUNT;
-        RAISE NOTICE '[ai.search] Hybrid: fulltext ranker found % docs  (+% ms)',
+        RAISE NOTICE '[ai.search_orig] Hybrid: fulltext ranker found % docs  (+% ms)',
             _candidate_cnt, extract(milliseconds from clock_timestamp() - _phase_ts)::int;
         _phase_ts := clock_timestamp();
 
@@ -417,7 +490,7 @@ BEGIN
             _id_col, _title_col, _content_col, _tbl, _id_col
         ) USING query_embedding, fetch_limit, rrf_k;
         GET DIAGNOSTICS _candidate_cnt = ROW_COUNT;
-        RAISE NOTICE '[ai.search] Hybrid: RRF fusion produced % candidates  (+% ms)',
+        RAISE NOTICE '[ai.search_orig] Hybrid: RRF fusion produced % candidates  (+% ms)',
             _candidate_cnt, extract(milliseconds from clock_timestamp() - _phase_ts)::int;
         _phase_ts := clock_timestamp();
 
@@ -430,7 +503,7 @@ BEGIN
     -- =================================================================
 
     IF rerank THEN
-        RAISE NOTICE '[ai.search] Reranking % candidates via % ...',
+        RAISE NOTICE '[ai.search_orig] Reranking % candidates via % ...',
             (SELECT count(*) FROM _search_candidates), rerank_model;
         _phase_ts := clock_timestamp();
         RETURN QUERY
@@ -454,7 +527,7 @@ BEGIN
         ) rr ON rr.id = c._id::text
         ORDER BY rr.score DESC
         LIMIT top_k;
-        RAISE NOTICE '[ai.search] Rerank done  (+% ms)',
+        RAISE NOTICE '[ai.search_orig] Rerank done  (+% ms)',
             extract(milliseconds from clock_timestamp() - _phase_ts)::int;
     ELSE
         RETURN QUERY
@@ -464,17 +537,360 @@ BEGIN
         LIMIT top_k;
     END IF;
 
-    RAISE NOTICE '[ai.search] DONE  total=% ms',
+    RAISE NOTICE '[ai.search_orig] DONE  total=% ms',
         extract(milliseconds from clock_timestamp() - _start_ts)::int;
 END;
 $$;
 
-COMMENT ON FUNCTION ai.search(text, text, text, int, int, text, text, text, text, text, text, boolean, text) IS
+COMMENT ON FUNCTION ai.search_orig(text, text, text, int, int, text, text, text, text, text, text, boolean, text) IS
 'Unified search over any table. Auto-detects columns from indexes: '
 'primary key → id, BM25 (fts) index → content, vector index → embedding. '
 'Supports vector, fulltext (BM25), and hybrid (RRF) search with optional pre-filtering. '
 'Optionally reranks with azure_ai.rank(). Just point it at your table: '
-'SELECT * FROM ai.search(''query'', source_table => ''my_docs'');';
+'SELECT * FROM ai.search_orig(''query'', source_table => ''my_docs'');';
+
+
+-- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+-- SECTION 3b: ai.search — two-layer, inlineable refactor (was ai.search_v2)
+-- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+--
+-- The ai.search_orig() function above is a single plpgsql blob that does
+-- everything (column detection, candidate retrieval, RRF fusion, optional
+-- rerank).  Convenient, but EXPLAIN ANALYZE just shows one opaque function
+-- call — you cannot see the BM25 scan, the diskann scan, or the RRF join.
+--
+-- ai.search() takes the same workload and splits it into three
+-- explicit component functions joined by a tiny top-level wrapper.  The
+-- wrapper and two of the components are LANGUAGE sql, so the planner
+-- inlines them and EXPLAIN ANALYZE reveals the underlying index scans and
+-- the RRF hash-join structure.  Semantic reranking is deliberately not
+-- included; this version focuses on showing the hybrid retrieval shape.
+--
+-- Top:        ai.search(query, source_table, content_column, [rerank,] ...)
+-- Components: ai.search_fulltext(query, k, source_table, content_column) → int[]
+--             ai.search_vector(qv vector, k, source_table)              → int[]
+--             ai.rrf_fuse(fts_ids, vec_ids, rrf_k, top_k)                → TABLE(id, score)
+--             ai.rerank(query, cand_ids, model, source_table, content_column)
+--
+-- source_table / content_column are required parameters; the embedding
+-- column is hard-coded to `embedding`.  search_fulltext, search_vector
+-- and rerank use EXECUTE / format(%I) for dynamic identifier safety.
+-- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+-- ---------------------------------------------------------------------------
+-- Component 1: full-text (BM25) search via pgfts.
+-- pgfts requires the query string to be visible at plan time so it can
+-- attach the FTS index path.  Inside a LANGUAGE sql body the literal is
+-- hidden behind a parameter and pgfts errors out, so this component is
+-- plpgsql + EXECUTE (the only non-inlineable arm).
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION ai.search_fulltext(
+    query          text,
+    k              int,
+    source_table   text DEFAULT 'product_rag_pipeline_build_2026_output',
+    content_column text DEFAULT 'chunk_text'
+)
+RETURNS int[]
+LANGUAGE plpgsql
+STABLE
+SET search_path TO 'public', 'pgfts', '$user'
+AS $$
+DECLARE
+    result int[];
+BEGIN
+    EXECUTE format(
+        'SELECT ARRAY(
+             SELECT id
+             FROM public.%I
+             WHERE %I OPERATOR(pgfts.@@?) %L
+             LIMIT %s
+         )',
+        source_table, content_column, query, k
+    ) INTO result;
+    RETURN result;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Component 2: vector kNN over the diskann index (cosine distance).
+-- plpgsql so the planner cannot inline it — EXPLAIN ANALYZE shows this
+-- arm as an opaque Function Scan instead of leaking the diskann scan
+-- into the top-level plan.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION ai.search_vector(
+    qv           vector,
+    k            int,
+    source_table text DEFAULT 'product_rag_pipeline_build_2026_output'
+)
+RETURNS int[]
+LANGUAGE plpgsql
+STABLE
+PARALLEL SAFE
+AS $$
+DECLARE
+    result int[];
+BEGIN
+    EXECUTE format(
+        'SELECT ARRAY(
+             SELECT id
+             FROM public.%I
+             WHERE embedding IS NOT NULL
+             ORDER BY embedding <=> %L
+             LIMIT %s
+         )',
+        source_table, qv, k
+    ) INTO result;
+    RETURN result;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Component 3: Reciprocal Rank Fusion.
+-- Inputs are rank-ordered int[] (position in array = rank).  LANGUAGE sql
+-- with a single SELECT so the planner can inline this into the calling
+-- query (IMMUTABLE + no PL/pgSQL block).
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION ai.rrf_fuse(
+    fts_ids int[],
+    vec_ids int[],
+    rrf_k   int DEFAULT 60,
+    top_k   int DEFAULT 10
+)
+RETURNS TABLE(id int, score real)
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+    WITH
+    fts AS (
+        SELECT t.id::int  AS fts_id,
+               t.ord::int AS rank
+        FROM unnest(fts_ids) WITH ORDINALITY AS t(id, ord)
+    ),
+    vec AS (
+        SELECT t.id::int  AS vec_id,
+               t.ord::int AS rank
+        FROM unnest(vec_ids) WITH ORDINALITY AS t(id, ord)
+    ),
+    all_ids AS (
+        SELECT fts_id AS doc_id FROM fts
+        UNION
+        SELECT vec_id AS doc_id FROM vec
+    )
+    SELECT
+        a.doc_id,
+        (COALESCE(1.0::real / (rrf_k + f.rank), 0::real)
+       + COALESCE(1.0::real / (rrf_k + v.rank), 0::real))::real AS rrf_score
+    FROM all_ids a
+    LEFT JOIN fts f ON f.fts_id = a.doc_id
+    LEFT JOIN vec v ON v.vec_id = a.doc_id
+    ORDER BY 2 DESC
+    LIMIT top_k;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Component 4: Semantic rerank wrapper.
+-- Takes an ordered array of candidate IDs (best-first) and returns the
+-- cross-encoder reranked scores from azure_ai.rank().  plpgsql so the
+-- join to the source table + array_agg + the rank() call stay hidden
+-- behind a single opaque Function Scan in EXPLAIN ANALYZE.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION ai.rerank(
+    query          text,
+    cand_ids       int[],                                                       -- candidate IDs in best-first order
+    model          text DEFAULT 'default-chat',
+    source_table   text DEFAULT 'product_rag_pipeline_build_2026_output',
+    content_column text DEFAULT 'chunk_text'
+)
+RETURNS TABLE(id int, score real)
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    docs_contents text[];
+    docs_ids      text[];
+BEGIN
+    -- Pull chunk text for the candidate IDs, preserving their input order.
+    EXECUTE format(
+        'SELECT array_agg(p.%I ORDER BY c.ord),
+                array_agg(p.id::text ORDER BY c.ord)
+         FROM unnest($1) WITH ORDINALITY AS c(doc_id, ord)
+         JOIN public.%I p ON p.id = c.doc_id',
+        content_column, source_table
+    )
+    INTO docs_contents, docs_ids
+    USING cand_ids;
+
+    RETURN QUERY
+    SELECT (rr.id)::int     AS id,
+           (rr.score)::real AS score
+    FROM azure_ai.rank(
+        query             => rerank.query,
+        document_contents => docs_contents,
+        document_ids      => docs_ids,
+        model             => rerank.model
+    ) rr;
+END;
+$$;
+
+
+-- ---------------------------------------------------------------------------
+-- Top layer: two overloads of ai.search.
+--
+--   1) ai.search(query, source_table, content_column,
+--                   top_k, rrf_k, fetch_k)
+--        Pure hybrid RRF — three component calls, no reranking.  STABLE.
+--   2) ai.search(query, source_table, content_column, rerank,
+--                   top_k, rrf_k, fetch_k, rerank_model)
+--        Adds a semantic rerank step via ai.rerank().  The `rerank`
+--        parameter has no default; that is what disambiguates this
+--        overload from the no-rerank one above.
+--
+-- The first three parameters — query, source_table, content_column —
+-- are required on both overloads.  Both wrappers are LANGUAGE sql and
+-- inline, while each underlying component (search_fulltext,
+-- search_vector, rrf_fuse, rerank) is plpgsql and therefore opaque in
+-- EXPLAIN ANALYZE.
+-- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS ai.search(text, int, int, int);
+DROP FUNCTION IF EXISTS ai.search(text, int, int, int, boolean, text);
+DROP FUNCTION IF EXISTS ai.search(text, boolean, int, int, int, text);
+DROP FUNCTION IF EXISTS ai.search(text, int, int, int, text, text);
+DROP FUNCTION IF EXISTS ai.search(text, boolean, int, int, int, text, text, text);
+DROP FUNCTION IF EXISTS ai.search(text, text, text, int, int, int);
+DROP FUNCTION IF EXISTS ai.search(text, text, text, boolean, int, int, int, text);
+
+-- Overload 1: no reranking.
+CREATE OR REPLACE FUNCTION ai.search(
+    query          text,
+    source_table   text,
+    content_column text,
+    search_type    text DEFAULT 'hybrid',          -- 'hybrid' | 'vector' | 'fulltext'
+    top_k          int DEFAULT 10,
+    rrf_k          int DEFAULT 60,
+    fetch_k        int DEFAULT NULL          -- per-arm candidates; default = top_k * 3
+)
+RETURNS TABLE(id int, score real)
+LANGUAGE sql
+STABLE
+AS $$
+    WITH
+    "full-text search" AS MATERIALIZED (
+        SELECT s.ids
+        FROM (SELECT 1 WHERE search_type IN ('fulltext','hybrid')) AS g,
+             LATERAL (SELECT ai.search_fulltext(query, COALESCE(fetch_k, top_k * 3),
+                                                source_table, content_column) AS ids) s
+        UNION ALL
+        SELECT '{}'::int[] AS ids WHERE search_type NOT IN ('fulltext','hybrid')
+    ),
+    "vector search" AS MATERIALIZED (
+        SELECT s.ids
+        FROM (SELECT 1 WHERE search_type IN ('vector','hybrid')) AS g,
+             LATERAL (SELECT ai.search_vector(
+                 azure_openai.create_embeddings('default-embedding', query)::vector,
+                 COALESCE(fetch_k, top_k * 3),
+                 source_table
+             ) AS ids) s
+        UNION ALL
+        SELECT '{}'::int[] AS ids WHERE search_type NOT IN ('vector','hybrid')
+    ),
+    "RRF - Reciprocal Rank Fusion: score = Σ  1 / (60 + rank_i(d))" AS MATERIALIZED (
+        SELECT r.id, r.score
+        FROM ai.rrf_fuse(
+            (SELECT ids FROM "full-text search"),
+            (SELECT ids FROM "vector search"),
+            rrf_k,
+            top_k
+        ) AS r
+    )
+    SELECT id, score FROM "RRF - Reciprocal Rank Fusion: score = Σ  1 / (60 + rank_i(d))";
+$$;
+
+COMMENT ON FUNCTION ai.search(text, text, text, text, int, int, int) IS
+'Inlineable two-layer hybrid search: ai.search_fulltext + ai.search_vector '
+'fused by ai.rrf_fuse via RRF. No reranking. `search_type` selects which '
+'retrieval arms run: ''hybrid'' (default), ''vector'', or ''fulltext''. '
+'Embedding column is hard-coded to `embedding`.';
+
+-- Overload 2: with semantic reranking via ai.rerank().
+-- `rerank` has NO default — that disambiguates this overload from the
+-- no-rerank one above.
+CREATE OR REPLACE FUNCTION ai.search(
+    query          text,
+    source_table   text,
+    content_column text,
+    search_type    text,                            -- 'hybrid' | 'vector' | 'fulltext'
+    rerank         boolean,
+    top_k          int  DEFAULT 10,
+    rrf_k          int  DEFAULT 60,
+    fetch_k        int  DEFAULT NULL,         -- per-arm candidates; default = top_k * 3
+    rerank_model   text DEFAULT 'default-chat'
+)
+RETURNS TABLE(id int, score real)
+LANGUAGE sql
+STABLE
+AS $$
+    WITH
+    "full-text search" AS MATERIALIZED (
+        SELECT s.ids
+        FROM (SELECT 1 WHERE search_type IN ('fulltext','hybrid')) AS g,
+             LATERAL (SELECT ai.search_fulltext(query, COALESCE(fetch_k, top_k * 3),
+                                                source_table, content_column) AS ids) s
+        UNION ALL
+        SELECT '{}'::int[] AS ids WHERE search_type NOT IN ('fulltext','hybrid')
+    ),
+    "vector search" AS MATERIALIZED (
+        SELECT s.ids
+        FROM (SELECT 1 WHERE search_type IN ('vector','hybrid')) AS g,
+             LATERAL (SELECT ai.search_vector(
+                 azure_openai.create_embeddings('default-embedding', query)::vector,
+                 COALESCE(fetch_k, top_k * 3),
+                 source_table
+             ) AS ids) s
+        UNION ALL
+        SELECT '{}'::int[] AS ids WHERE search_type NOT IN ('vector','hybrid')
+    ),
+    "RRF - Reciprocal Rank Fusion: score = Σ  1 / (60 + rank_i(d))" AS MATERIALIZED (
+        SELECT r.id, r.score
+        FROM ai.rrf_fuse(
+            (SELECT ids FROM "full-text search"),
+            (SELECT ids FROM "vector search"),
+            rrf_k,
+            -- Pull a wider candidate set when reranking so the cross-encoder
+            -- has room to reorder; otherwise just return top_k.
+            CASE WHEN rerank THEN top_k * 3 ELSE top_k END
+        ) AS r
+    ),
+    "semantic rerank" AS MATERIALIZED (
+        SELECT r.id, r.score
+        FROM (SELECT 1 WHERE rerank) AS g,
+        LATERAL ai.rerank(
+            query,
+            ARRAY(
+                SELECT id
+                FROM "RRF - Reciprocal Rank Fusion: score = Σ  1 / (60 + rank_i(d))"
+                ORDER BY score DESC
+            ),
+            rerank_model,
+            source_table,
+            content_column
+        ) AS r
+    )
+    SELECT id, score
+    FROM "semantic rerank"
+    UNION ALL
+    SELECT id, score
+    FROM "RRF - Reciprocal Rank Fusion: score = Σ  1 / (60 + rank_i(d))"
+    WHERE NOT rerank
+    ORDER BY 2 DESC
+    LIMIT top_k;
+$$;
+
+COMMENT ON FUNCTION ai.search(text, text, text, text, boolean, int, int, int, text) IS
+'Inlineable hybrid search with optional semantic reranking via ai.rerank(). '
+'query, source_table, content_column, search_type, and rerank are all '
+'required (no defaults). `search_type` is ''hybrid'' | ''vector'' | '
+'''fulltext''. Embedding column is hard-coded to `embedding`.';
 
 
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -482,20 +898,20 @@ COMMENT ON FUNCTION ai.search(text, text, text, int, int, text, text, text, text
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 -- 4a. Default: searches 'knowledge_base' — columns auto-detected from indexes
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'how do I set up disaster recovery for PostgreSQL?',
     rerank => false
 );
 
 -- 4b. Vector-only search (auto-detects embedding column from vector index)
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'scaling read-heavy workloads',
     search_type => 'vector',
     rerank => false
 );
 
 -- 4c. Full-text only (auto-detects content column from BM25 fts index)
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'replication slots WAL',
     search_type => 'fulltext',
     rerank => false
@@ -503,13 +919,13 @@ SELECT * FROM ai.search(
 
 -- 4d. Point at a different table — columns auto-detected from its indexes
 --     (Requires: my_articles table with fts + vector indexes)
--- SELECT * FROM ai.search(
+-- SELECT * FROM ai.search_orig(
 --     'machine learning pipelines',
 --     source_table => 'my_articles'
 -- );
 
 -- 4e. Override specific columns (when auto-detection picks wrong one)
--- SELECT * FROM ai.search(
+-- SELECT * FROM ai.search_orig(
 --     'machine learning pipelines',
 --     source_table     => 'articles',
 --     content_column   => 'body',
@@ -518,7 +934,7 @@ SELECT * FROM ai.search(
 -- );
 
 -- 4f. Hybrid with custom top_k
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'high availability failover',
     top_k => 5,
     rerank => false
@@ -527,12 +943,12 @@ SELECT * FROM ai.search(
 
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 -- SECTION 4b: product_sample Examples
--- Uses ai.search() against the 100K Amazon product catalog.
+-- Uses ai.search_orig() against the 100K Amazon product catalog.
 -- Table has: idx_product_fts (BM25 on title/store), DiskANN on embedding.
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 -- 4h. Hybrid on product catalog — BM25 + vector + RRF
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'mid-century modern coffee table',
     source_table     => 'product_sample',
     search_type      => 'hybrid',
@@ -544,7 +960,7 @@ SELECT * FROM ai.search(
 );
 
 -- 4i. Product search with reranking
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'quiet space heater for bedroom energy efficient',
     source_table     => 'product_sample',
     search_type      => 'hybrid',
@@ -556,7 +972,7 @@ SELECT * FROM ai.search(
 );
 
 -- 4j. Vector-only product search
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'bohemian area rug for living room loft warm tones',
     source_table     => 'product_sample',
     search_type      => 'vector',
@@ -567,7 +983,7 @@ SELECT * FROM ai.search(
 );
 
 -- 4k. BM25-only product search
-SELECT * FROM ai.search(
+SELECT * FROM ai.search_orig(
     'VASAGLE bookshelf industrial rustic',
     source_table     => 'product_sample',
     search_type      => 'fulltext',
@@ -583,36 +999,36 @@ SELECT * FROM ai.search(
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 --
 -- ┌─────────────────────────────────────────────────────────────┐
--- │                  ai.search(query)                           │
+-- │                  ai.search_orig(query)                           │
 -- │                                                             │
--- │  ┌──────────────────┐  ┌──────────────────┐                │
+-- │  ┌───────────────────┐  ┌──────────────────┐                │
 -- │  │     Vector        │  │    Full-Text     │                │
 -- │  │    (pgvector)     │  │    (pg_fts)      │                │
 -- │  │                   │  │                  │                │
--- │  │  cosine            │  │  BM25            │                │
--- │  │  similarity        │  │  scoring         │                │
+-- │  │  cosine           │  │  BM25            │                │
+-- │  │  similarity       │  │  scoring         │                │
 -- │  └────────┬──────────┘  └────────┬─────────┘                │
 -- │           │                      │                          │
 -- │           ▼                      ▼                          │
--- │  ┌───────────────────────────────────────────────────┐     │
--- │  │         Reciprocal Rank Fusion (RRF)              │     │
--- │  │                                                   │     │
--- │  │   score(d) = Σ  1 / (60 + rank_i(d))            │     │
--- │  └───────────────────────┬───────────────────────────┘     │
--- │                          │                                 │
--- │                          ▼                                 │
--- │  ┌───────────────────────────────────────────────────┐     │
--- │  │         Cross-Encoder Reranker                    │     │
--- │  │         (azure_ai.rank)                           │     │
--- │  │                                                   │     │
--- │  │   • Cohere Rerank v3.5 (default) or GPT-based    │     │
--- │  │   • Fine-grained query–document scoring           │     │
--- │  │   • Catches subtleties embeddings/BM25 miss       │     │
--- │  └───────────────────────┬───────────────────────────┘     │
--- │                          │                                 │
--- │                          ▼                                 │
--- │                   Top-K results                            │
--- │              (id, title, content, score)                   │
+-- │  ┌────────────────────────────────────────────────────┐     │
+-- │  │         Reciprocal Rank Fusion (RRF)               │     │
+-- │  │                                                    │     │
+-- │  │   score(d) = Σ  1 / (60 + rank_i(d))               │     │
+-- │  └───────────────────────┬────────────────────────────┘     │
+-- │                          │                                  │
+-- │                          ▼                                  │
+-- │  ┌────────────────────────────────────────────────────┐     │
+-- │  │         Cross-Encoder Reranker                     │     │
+-- │  │         (azure_ai.rank)                            │     │
+-- │  │                                                    │     │
+-- │  │   • Cohere Rerank v4.0-fast (default) or GPT-based │     │
+-- │  │   • Fine-grained query–document scoring            │     │
+-- │  │   • Catches subtleties embeddings/BM25 miss        │     │
+-- │  └───────────────────────┬────────────────────────────┘     │
+-- │                          │                                  │
+-- │                          ▼                                  │
+-- │                   Top-K results                             │
+-- │              (id, title, content, score)                    │
 -- └─────────────────────────────────────────────────────────────┘
 --
 -- Search types:

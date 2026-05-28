@@ -38,22 +38,22 @@ SELECT ai.create_pipeline(
 );
 -- Auto-creates: public.{pipeline_name}_output (doc_id, chunk_index, chunk_text, embedding, ...)
 
-SELECT ai.run('product_rag_pipeline_build_2026');
+SELECT ai.run('product_rag_pipeline_build_2026_5');
 
 -- ---------------------------------------------------------------------------
 -- ACT 1B — Monitor Pipeline 
 -- Show in VSCode extension as well
 -- ---------------------------------------------------------------------------
 
-SELECT * FROM ai.status('product_rag_pipeline_build_2026');
+SELECT * FROM ai.status('product_rag_pipeline_build_2026_5');
 SELECT * FROM ai.list_pipelines();
 
 -- ---------------------------------------------------------------------------
 -- ACT 1C — Look at output table
 -- ---------------------------------------------------------------------------
 
-SELECT count(*) FROM product_rag_pipeline_build_2026_output;
-SELECT doc_id, chunk_index, chunk_text, LEFT(chunk_text, 100) AS embedding_preview FROM product_rag_pipeline_build_2026_output LIMIT 5;
+SELECT count(*) FROM product_rag_pipeline_build_2026_5_output;
+SELECT doc_id, chunk_index, chunk_text, LEFT(chunk_text, 100) AS embedding_preview FROM product_rag_pipeline_build_2026_5_output LIMIT 5;
 
 -- ---------------------------------------------------------------------------
 -- ACT 1D — Vector Search
