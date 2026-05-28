@@ -14,7 +14,8 @@
 
 [CmdletBinding()]
 param(
-    [switch]$Foreground
+    [switch]$Foreground,
+    [switch]$NoClean
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +40,11 @@ if (-not $sql) {
     throw "azsql-zavalivesite container is not running. Run .\Start-AzureSqlContainer.ps1 first."
 }
 Write-Host "[Start-LiveSite] azsql-zavalivesite: $sql" -ForegroundColor Green
+
+if (-not $NoClean) {
+    Write-Host "[Start-LiveSite] Cleaning prior AppHost/DAB runtime..." -ForegroundColor DarkGray
+    & (Join-Path $PSScriptRoot 'Stop-LiveSite.ps1') | Out-Null
+}
 
 Push-Location $apphostDir
 try {

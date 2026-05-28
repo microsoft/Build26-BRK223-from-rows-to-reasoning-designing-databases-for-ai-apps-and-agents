@@ -12,6 +12,11 @@
     - JSON Index on IncidentArchive.Tags ($.errorCode) — INTENTIONALLY OMITTED.
       That index is added live on stage in Beat 2c via 02b_apply_fix.sql.
       Do not add it here.
+
+  Presentation-friendly split files (same concepts, easier to show):
+    - 01a_tables.sql
+    - 01b_external_model.sql
+    - 01c_proc_hybrid_search.sql
 ============================================================================*/
 USE zavalivesitedb;
 GO
@@ -20,40 +25,7 @@ PRINT '>>> 01_schema.sql starting...';
 GO
 
 /*-----------------------------------------------------------
-  EXTERNAL MODELs (container path)
-  -----------------------------------------------------------
-  Embeddings only — Azure SQL today supports MODEL_TYPE = EMBEDDINGS
-  on EXTERNAL MODEL. Chat completions are invoked directly via
-  sp_invoke_external_rest_endpoint inside usp_GenerateMitigation, with the
-  endpoint URL parameterized (@ChatUrl) and a DATABASE SCOPED CREDENTIAL
-  bound to the URL.
-
-  Container side:
-    EMBEDDINGS  -> OllamaMxbai      (mxbai-embed-large -> vector(1024))
-    CHAT        -> sp_invoke against https://localhost:8444/v1/chat/completions (in-container)
-
-  Cloud side (Hyperscale, deployed separately):
-    EMBEDDINGS  -> AoaiTextEmbed3Small (text-embedding-3-small -> vector(1536))
-    CHAT        -> sp_invoke against AOAI gpt-4o-mini deployment URL
------------------------------------------------------------*/
-IF EXISTS (SELECT 1 FROM sys.external_models WHERE name = N'OllamaMxbai')
-    DROP EXTERNAL MODEL OllamaMxbai;
-GO
-
-CREATE EXTERNAL MODEL OllamaMxbai
-WITH (
-    LOCATION   = 'https://localhost:8444/v1/embeddings',
-    API_FORMAT = 'OpenAI',
-    MODEL_TYPE = EMBEDDINGS,
-    MODEL      = 'mxbai-embed-large'
-);
-GO
-
-PRINT '  EXTERNAL MODEL OllamaMxbai created (chat goes via sp_invoke).';
-GO
-
-/*-----------------------------------------------------------
-  Tables
+  1) TABLES
 -----------------------------------------------------------*/
 IF OBJECT_ID(N'dbo.Incident', N'U')        IS NOT NULL DROP TABLE dbo.Incident;
 IF OBJECT_ID(N'dbo.IncidentArchive', N'U') IS NOT NULL DROP TABLE dbo.IncidentArchive;
@@ -148,6 +120,39 @@ PRINT '  Tables created (incl. ledger AppLog).';
 GO
 
 /*-----------------------------------------------------------
+  2) CREATE EXTERNAL MODEL (container path)
+  -----------------------------------------------------------
+  Embeddings only — Azure SQL today supports MODEL_TYPE = EMBEDDINGS
+  on EXTERNAL MODEL. Chat completions are invoked directly via
+  sp_invoke_external_rest_endpoint inside usp_GenerateMitigation, with the
+  endpoint URL parameterized (@ChatUrl) and a DATABASE SCOPED CREDENTIAL
+  bound to the URL.
+
+  Container side:
+    EMBEDDINGS  -> OllamaMxbai      (mxbai-embed-large -> vector(1024))
+    CHAT        -> sp_invoke against https://localhost:8444/v1/chat/completions (in-container)
+
+  Cloud side (Hyperscale, deployed separately):
+    EMBEDDINGS  -> AoaiTextEmbed3Small (text-embedding-3-small -> vector(1536))
+    CHAT        -> sp_invoke against AOAI gpt-4o-mini deployment URL
+-----------------------------------------------------------*/
+IF EXISTS (SELECT 1 FROM sys.external_models WHERE name = N'OllamaMxbai')
+    DROP EXTERNAL MODEL OllamaMxbai;
+GO
+
+CREATE EXTERNAL MODEL OllamaMxbai
+WITH (
+    LOCATION   = 'https://localhost:8444/v1/embeddings',
+    API_FORMAT = 'OpenAI',
+    MODEL_TYPE = EMBEDDINGS,
+    MODEL      = 'mxbai-embed-large'
+);
+GO
+
+PRINT '  EXTERNAL MODEL OllamaMxbai created (chat goes via sp_invoke).';
+GO
+
+/*-----------------------------------------------------------
   JSON indexes
   -----------------------------------------------------------
   See design.md §4.
@@ -194,7 +199,9 @@ PRINT '  Vector indexes deferred — run 03_vector_indexes.sql after seeding.';
 GO
 
 /*-----------------------------------------------------------
-  usp_HybridSearch — Beat 2 demo proc AND MCP-facing tool.
+  3) PROC FOR VECTOR SEARCH (usp_HybridSearch)
+  -----------------------------------------------------------
+  Beat 2 demo proc AND MCP-facing tool.
   -----------------------------------------------------------
   One statement, two specialized access paths composed by the optimizer:
 
@@ -253,7 +260,7 @@ BEGIN
     );
 
     INSERT @incidents (source, id, title, body, distance, extra)
-    SELECT TOP (@lTopK)
+    SELECT TOP (@lTopK) WITH APPROXIMATE
            N'incident',
            CAST(a.IncidentId AS nvarchar(60)),
            a.Service + N' / ' + ISNULL(a.Severity, N''),

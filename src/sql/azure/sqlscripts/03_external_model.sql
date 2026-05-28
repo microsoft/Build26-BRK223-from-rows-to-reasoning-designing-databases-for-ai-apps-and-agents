@@ -33,6 +33,13 @@
 :setvar EmbedDeployment "text-embedding-3-small"
 :setvar AoaiApiVersion  "2024-10-21"
 
+/*----------------------------------------------------------------------------
+  2) CREATE EXTERNAL MODEL (cloud)
+
+  Keeps the same conceptual slot as local 01_schema.sql section (2),
+  but in cloud deployment this is split into its own script.
+----------------------------------------------------------------------------*/
+
 -- Connection is already scoped to the target database by Prep-Cloud.ps1.
 -- Azure SQL does not support USE to switch databases, so no USE here.
 GO

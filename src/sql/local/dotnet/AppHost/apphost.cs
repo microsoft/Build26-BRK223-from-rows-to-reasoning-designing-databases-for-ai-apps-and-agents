@@ -42,7 +42,8 @@ var sqlConn = builder.AddParameter("sqlconn", sqlConnValue, secret: true);
 var dab = builder.AddContainer("dab", "mcr.microsoft.com/azure-databases/data-api-builder", "2.0.0-rc")
     .WithEnvironment("MSSQL_CONNECTION_STRING", sqlConn)
     .WithBindMount("dab-config.json", "/App/dab-config.json", isReadOnly: true)
-    .WithHttpEndpoint(port: 8765, targetPort: 5000, name: "http");
+    .WithHttpEndpoint(port: 8765, targetPort: 5000, name: "http")
+    .WithEndpoint("http", e => { e.Port = 8765; e.TargetPort = 5000; e.IsProxied = false; });
 
 // Blazor WASM standalone front-end. WithReference injects the DAB http
 // endpoint URL into configuration as services:dab:http:0, which Program.cs
