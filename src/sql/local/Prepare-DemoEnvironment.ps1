@@ -57,6 +57,53 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
+function Assert-DockerReady {
+    # Resolve docker CLI on PATH (or common Docker Desktop install path).
+    $docker = Get-Command docker -ErrorAction SilentlyContinue
+    if (-not $docker) {
+        $candidate = @(
+            "$Env:ProgramFiles\Docker\Docker\resources\bin\docker.exe",
+            "${Env:ProgramFiles(x86)}\Docker\Docker\resources\bin\docker.exe"
+        ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+
+        if (-not $candidate) {
+            throw "Docker CLI not found. Install Docker Desktop ('winget install Docker.DockerDesktop') and re-run."
+        }
+
+        $env:Path = (Split-Path $candidate) + ';' + $env:Path
+    }
+
+    docker info *>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host 'Docker engine: ready' -ForegroundColor DarkGray
+        return
+    }
+
+    $desktop = @(
+        "$Env:ProgramFiles\Docker\Docker\Docker Desktop.exe",
+        "${Env:ProgramFiles(x86)}\Docker\Docker\Docker Desktop.exe"
+    ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+
+    if (-not $desktop) {
+        throw 'Docker engine is not running and Docker Desktop.exe was not found. Start Docker Desktop and re-run.'
+    }
+
+    Write-Host 'Docker engine is not running. Launching Docker Desktop...' -ForegroundColor Yellow
+    Start-Process -FilePath $desktop | Out-Null
+
+    $deadline = (Get-Date).AddMinutes(3)
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 3
+        docker info *>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Docker engine: ready' -ForegroundColor DarkGray
+            return
+        }
+    }
+
+    throw 'Docker Desktop did not become ready within 3 minutes. Start Docker manually and re-run.'
+}
+
 function Read-SecretAsPlainText {
     param([Parameter(Mandatory)] [string]$Prompt)
 
@@ -139,6 +186,8 @@ function Maybe-PersistSqlImage {
     $env:BRK223_SQL_IMAGE = $ResolvedImage
     Write-Host "Saved BRK223_SQL_IMAGE (User): $ResolvedImage" -ForegroundColor DarkGray
 }
+
+Assert-DockerReady
 
 $SaPassword = if ($null -ne $SaCredential) {
     Convert-PasswordInputToPlainText -Value $SaCredential -Prompt 'Enter SA password (BRK223_SA_PASSWORD)'
@@ -236,6 +285,10 @@ if ($SkipStart) {
     Write-Host '  [SKIP] skipped (-SkipStart)' -ForegroundColor DarkYellow
 } else {
     Invoke-Step -Number 6 -Name 'Start LiveSite (AppHost + DAB + web)' -Action {
+        # Ensure Start-LiveSite has the SQL credentials/context it expects.
+        $env:BRK223_SQLADMIN_PASSWORD = $SqlAdminPassword
+        $env:BRK223_SQL_CONNECTION_STRING = "Server=host.docker.internal,$SqlPort;Database=zavalivesitedb;User Id=sqladmin;Password=$SqlAdminPassword;TrustServerCertificate=True;Encrypt=True;Command Timeout=180"
+
         & "$PSScriptRoot\Start-LiveSite.ps1"
         if ($LASTEXITCODE -ne 0) {
             throw "Start-LiveSite.ps1 exited $LASTEXITCODE"
@@ -244,5 +297,5 @@ if ($SkipStart) {
 }
 
 Write-Host "`nEnvironment prep complete." -ForegroundColor Green
-Write-Host 'Browser: http://localhost:8080/?dab=local' -ForegroundColor DarkGray
+Write-Host 'Browser: http://localhost:8080' -ForegroundColor DarkGray
 Write-Host 'Optional smoke: .\Test-AgentPath.ps1 -WithReset' -ForegroundColor DarkGray

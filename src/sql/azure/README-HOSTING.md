@@ -142,7 +142,7 @@ azure/
 | ACA app stuck in `Provisioning` for >5 min                    | Image hasn't been built yet — confirm `az acr repository list -n <acr>` shows `zavalivesite-dab`.   |
 | DAB returns 500 on `/api/Incident`                            | Connection string MI auth not yet propagated. Re-restart the ACA revision after 30 s.         |
 | `CREATE USER FROM EXTERNAL PROVIDER` Msg 33159                | AAD hasn't propagated the new ACA principal yet. Script already sleeps 20 s; bump to 60 s.    |
-| Blazor `?dab=cloud` still hits localhost                      | `appsettings.Production.json` not in `wwwroot/`. Check `dotnet publish` output.               |
+| Blazor site still hits localhost                              | `appsettings.Production.json` not in `wwwroot/`. Check `dotnet publish` output.               |
 | MCP discovery returns 404 from VS Code                        | `.vscode/mcp.json` not reloaded — Cmd-Shift-P → "Developer: Reload Window".                   |
 
 ---

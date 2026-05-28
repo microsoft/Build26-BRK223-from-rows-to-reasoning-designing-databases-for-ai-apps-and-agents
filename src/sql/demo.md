@@ -4,7 +4,7 @@
 
 1. Beat 0 (0:00-0:20)
   - Tool: Browser
-  - Open: `http://localhost:8080/?dab=local`
+  - Run: `./Open-LiveSite.ps1`
   - Do: Show empty state.
   - Say: "One SQL row will light up this page."
 
@@ -63,7 +63,7 @@
 | 2 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (run query) + SSMS (plan view) | Run `06_hybrid_search.sql`, then show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
 | 3 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
 | 4 | DAB → MCP → SKILL-driven agent loop → page lights up | 5:00–6:30 | `dab-config.json` + Copilot Chat (agent mode, SKILL attached) + browser | (a) Show `dab-config.json`: REST + MCP from one config; `GenerateMitigation` + the three `dx_*` procs are stored-proc entities. (b) Copilot Chat: select `live-site-sql` agent, type *"Mitigate incident 5012 `@live-site-sql`"* (the `@`-mention forces deterministic skill load — own the choice on stage, see Beat 4(b)). The agent runs the protocol — hybrid_search → dx_index_exists / dx_resource_pressure / dx_deadlock_recent → generate_mitigation (with @DiagnosticsJson) → read back. (c) Alt-tab to browser — AI panel populates with summary, steps, citations, plus a "validated by 3 live diagnostics" badge |
-| 5 | Same page, swap DAB to Hyperscale + AOAI | 6:30–7:00 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4-mini`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Browser URL bar: `?dab=local` → `?dab=cloud`, refresh; footer flips to *"Powered by Azure SQL Hyperscale + Azure OpenAI."* Same row. Same page. *"In production the page lives in SWA, DAB in Container Apps — lift-and-shift."* |
+| 5 | Same page, cloud-hosted backend | 6:30–7:00 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4-mini`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Open the cloud-hosted site (SWA/App Service) and refresh to show the same incident contract via cloud DAB. Same row. Same page shape. *"In production the page lives in SWA/App Service, DAB in Container Apps — lift-and-shift."* |
 
 Total: 7:00. *(Beat 2 reclaimed 1:30 from the old slow→fast version — spend it on Beat 4 or trim the talk.)*
 
@@ -71,7 +71,7 @@ Total: 7:00. *(Beat 2 reclaimed 1:30 from the old slow→fast version — spend 
 
 ## Stage runbook (concise, do this live)
 
-1. **Beat 0 (Browser):** Open `http://localhost:8080/?dab=local`.
+1. **Beat 0 (Browser):** Run `./Open-LiveSite.ps1`.
   - Tool: Browser
   - Show: empty/placeholder state for incident 5012.
 
@@ -134,7 +134,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 ### Beat 0 — Open on the website (0:20)
 
 - Tool: Browser
-- Open: `http://localhost:8080/?dab=local`
+- Run: `./Open-LiveSite.ps1`
 - Show: empty state (no mitigation yet, placeholder chips/fields)
 - Say: *"This is the on-call console. In 30 seconds, one SQL INSERT will light up this page."*
 

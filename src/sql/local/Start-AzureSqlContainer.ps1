@@ -3,11 +3,13 @@
     Pulls and runs a SQL Server / Azure SQL container. No SQL connectivity test.
 
 .DESCRIPTION
-    1. Verifies docker is installed and resolves the image to pull.
-    2. If the image is hosted on an *.azurecr.io registry, performs ACR login
-       via the current `az` token (`az login` required, AcrPull on the registry
-       required). Other registries (e.g. mcr.microsoft.com) need no auth.
-    3. Pulls the image.
+     1. Verifies docker is installed and resolves the image to pull.
+     2. If the image is already present locally, reuses it and skips auth/pull.
+     3. Otherwise, if the image is hosted on an *.azurecr.io registry, performs
+         ACR login via the current `az` token (`az login` required, AcrPull on
+         the registry required). Other registries (e.g. mcr.microsoft.com) need
+         no auth.
+     4. Pulls the image when not already local.
     4. Removes any existing container named -ContainerName.
     5. Runs the container detached on -Port (default 1433).
 
@@ -148,7 +150,14 @@ Write-Host "=== Pre-flight checks ===" -ForegroundColor Cyan
 Initialize-Docker
 Write-Host "docker : $((docker --version))"
 
-if ($needsAcrLogin) {
+$localImagePresent = (docker image inspect $Image 2>$null | Out-String).Trim()
+$useLocalImage = -not [string]::IsNullOrWhiteSpace($localImagePresent)
+
+if ($useLocalImage) {
+    Write-Host "Image already exists locally; skipping registry login and pull." -ForegroundColor Green
+}
+
+if (-not $useLocalImage -and $needsAcrLogin) {
     Assert-Command az
     Write-Host "az     : $((az version --output tsv --query '\"azure-cli\"' 2>$null))"
 
@@ -158,22 +167,22 @@ if ($needsAcrLogin) {
     Write-Host ("Subscription: {0} ({1})" -f $acct.name, $acct.id)
     Write-Host ("User        : {0}" -f $acct.user.name)
 
-    Write-Host "`n=== ACR login via access token ===" -ForegroundColor Cyan
-    $acrName   = ($registry -split '\.')[0]
-    $tokenJson = az acr login -n $acrName --expose-token --output json 2>$null | ConvertFrom-Json
-    if (-not $tokenJson -or -not $tokenJson.accessToken) {
-        throw "Failed to obtain ACR access token for '$acrName'. Ensure your account has AcrPull on that registry."
+    Write-Host "`n=== ACR login ===" -ForegroundColor Cyan
+    $acrName = ($registry -split '\.')[0]
+    az acr login -n $acrName | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "az acr login failed for '$acrName'. Ensure your account has AcrPull on that registry and VPN/network access is available."
     }
-    $tokenJson.accessToken | docker login $registry --username '00000000-0000-0000-0000-000000000000' --password-stdin | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw "docker login to $registry failed." }
-} else {
+} elseif (-not $useLocalImage) {
     Write-Host "Registry '$registry' is public — skipping ACR / az login." -ForegroundColor DarkGray
 }
 
-Write-Host "`n=== Pulling image ===" -ForegroundColor Cyan
-Write-Host "Image: $Image"
-docker pull $Image | Out-Host
-if ($LASTEXITCODE -ne 0) { throw "docker pull failed." }
+if (-not $useLocalImage) {
+    Write-Host "`n=== Pulling image ===" -ForegroundColor Cyan
+    Write-Host "Image: $Image"
+    docker pull $Image | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "docker pull failed." }
+}
 
 $existing = docker ps -a --filter "name=^/$ContainerName$" --format '{{.ID}}'
 if ($existing) {
