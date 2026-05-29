@@ -14,12 +14,29 @@
 
 [CmdletBinding()]
 param(
-    [switch]$Foreground
+    [switch]$Foreground,
+    [switch]$NoClean
 )
 
 $ErrorActionPreference = 'Stop'
 
 if (-not $env:BRK223_SQL_CONNECTION_STRING) {
+    if (-not $env:BRK223_SQLADMIN_PASSWORD) {
+        $pwFile = Join-Path $PSScriptRoot '..\..\..\_remove-before-publish\local-passwords.txt'
+        if (Test-Path -LiteralPath $pwFile) {
+            $lines = Get-Content -LiteralPath $pwFile
+            $idx = [Array]::IndexOf($lines, 'sqladmin / SA password:')
+            if ($idx -ge 0 -and ($idx + 1) -lt $lines.Count) {
+                $candidate = [string]$lines[$idx + 1]
+                $candidate = $candidate.Trim()
+                if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+                    $env:BRK223_SQLADMIN_PASSWORD = $candidate
+                    Write-Host '[Start-LiveSite] Loaded BRK223_SQLADMIN_PASSWORD from _remove-before-publish/local-passwords.txt' -ForegroundColor DarkGray
+                }
+            }
+        }
+    }
+
     if (-not $env:BRK223_SQLADMIN_PASSWORD) {
         throw 'BRK223_SQL_CONNECTION_STRING is not set and BRK223_SQLADMIN_PASSWORD is missing. Set one of them before launching AppHost.'
     }
@@ -34,11 +51,16 @@ if (-not (Test-Path (Join-Path $apphostDir 'apphost.cs'))) {
 
 # Verify the SQL container is up before we start DAB (DAB will retry but
 # fail-fast here gives a clearer error on stage).
-$sql = docker ps --filter 'name=^azsql-zavalivesite$' --format '{{.Status}}'
+$sql = docker ps --filter 'name=^/azsql-zavalivesite$' --format '{{.Status}}'
 if (-not $sql) {
     throw "azsql-zavalivesite container is not running. Run .\Start-AzureSqlContainer.ps1 first."
 }
 Write-Host "[Start-LiveSite] azsql-zavalivesite: $sql" -ForegroundColor Green
+
+if (-not $NoClean) {
+    Write-Host "[Start-LiveSite] Cleaning prior AppHost/DAB runtime..." -ForegroundColor DarkGray
+    & (Join-Path $PSScriptRoot 'Stop-LiveSite.ps1') | Out-Null
+}
 
 Push-Location $apphostDir
 try {

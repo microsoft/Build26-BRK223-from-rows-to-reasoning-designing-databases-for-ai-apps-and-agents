@@ -130,8 +130,9 @@ and explain in the rollout_plan rationale. Examples:
   - dx_resource_pressure.finding = ''pressure_high''
       → do NOT propose immediate online DDL or large batched UPDATEs. Reorder
         the plan so heavy operations are scheduled, not applied right now.
-  - dx_deadlock_recent.finding = ''no_deadlock_history''
-      → cap confidence.overall at ''medium'' and note the symptom may already be mitigated.
+    - dx_deadlock_recent.finding = ''no_deadlock_history''
+      → symptom may already be self-mitigated. Keep confidence at ''medium'' unless
+        other signals (multiple matching prior incidents, narrow blast radius) override.
 
 Use LIVE DIAGNOSTICS for immediate action gating and ordering decisions. Do NOT
 ask for additional exploratory monitoring/diagnostic queries as preconditions when
@@ -154,8 +155,12 @@ Your job is to produce a JSON mitigation plan with THREE distinct contributions:
                       "per incident #<id>". This is Azure SQL Database, so anything the corpus
                       does not mention (SQL ERRORLOG, SSMS, Profiler, on-box files) is off-limits.
                       Avoid generic wording like "monitor closely" or "run monitoring queries".
-  3. confidence     — your honest assessment. Use "high" only when a prior incident matches the
-                      symptom closely. Note any caveats.
+  3. confidence     — your honest assessment. Use "high" when you have strong prior-incident
+                      matches (cosine distance <0.2) AND a narrow blast radius (<=1 active
+                      incident same service, <=2 affected tenants, <3 open sev1 total).
+                      Use "medium" for good matches but wider blast radius, or when a
+                      critical diagnostic finding (e.g., dx_resource_pressure=pressure_high)
+                      requires caution. Use "low" for weak matches or ambiguous symptoms.
 
 Return ONLY this JSON shape (no prose outside the JSON):
 { "summary": "<2-3 sentences. Sentence 1: the symptom and likely root cause, naming the specific error code, object (index/table/proc), and tenant/service. Sentence 2: the primary fix, naming the exact artifact (index name, setting, threshold) and where it is applied. Sentence 3 (optional): the secondary action or guardrail. Do NOT be generic — every sentence must contain at least one specific identifier from the alert, tags, prior incidents, or runbooks.>",
@@ -181,6 +186,10 @@ Return ONLY this JSON shape (no prose outside the JSON):
         N'  alert=' + ISNULL(@AlertJson, N'{}') + CHAR(10) +
         N'  tags='  + ISNULL(@TagsJson,  N'{}') + CHAR(10) +
         N'  note=' + ISNULL(@Note, N'') + CHAR(10) + CHAR(10) +
+        N'CONFIDENCE GUIDANCE: Award "high" when you have multiple prior incidents matching the symptom AND the blast' + CHAR(10) +
+        N'radius is narrow (few active incidents, single/few tenants affected, low open_sev1 count). Award "medium" for' + CHAR(10) +
+        N'good matches but wider blast radius OR missing diagnostic confirmation. Award "low" when symptom is ambiguous or' + CHAR(10) +
+        N'prior matches are weak.' + CHAR(10) + CHAR(10) +
         N'CURRENT-STATE SIGNALS (computed at query time, NOT from the corpus):' + CHAR(10) +
         N'  active_incidents_same_service_last_24h = ' + CAST(@ActiveSameService AS nvarchar(20)) + CHAR(10) +
         N'  distinct_tenants_affected_same_service = ' + CAST(@TenantsAffected   AS nvarchar(20)) + CHAR(10) +

@@ -27,6 +27,14 @@
 :setvar ChatDeployment "gpt-5-4-mini"
 :setvar AoaiApiVersion "2024-10-21"
 
+/*----------------------------------------------------------------------------
+  4) PROC FOR MITIGATION (cloud)
+
+  Local shows sections (1) tables, (2) external model, (3) vector-search proc.
+  Cloud keeps the same story split across scripts; this file is the cloud
+  mitigation proc shown before running the agent.
+----------------------------------------------------------------------------*/
+
 -- Connection is already scoped to the target database; Azure SQL does not support USE.
 GO
 

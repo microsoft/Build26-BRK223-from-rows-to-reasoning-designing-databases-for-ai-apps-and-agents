@@ -70,7 +70,13 @@ if ($PruneVolumes) {
 }
 
 Write-Host "`n[Teardown] Done. Remaining BRK223-related docker resources:" -ForegroundColor Green
-$leftovers = docker ps -a --format 'table {{.Names}}\t{{.Status}}' |
-    Where-Object { $_ -match 'NAMES|azsql-zavalivesite|^dab-' }
-if ($leftovers.Count -gt 1) { $leftovers | ForEach-Object { Write-Host "  $_" } }
-else { Write-Host "  (none)" -ForegroundColor DarkGray }
+$leftovers = @(docker ps -a --format 'table {{.Names}}\t{{.Status}}' |
+    Where-Object { $_ -match 'NAMES|azsql-zavalivesite|^dab-' })
+
+$rows = @($leftovers | Where-Object { $_ -notmatch '^\s*NAMES\s+' })
+if ($rows.Count -gt 0) {
+    $leftovers | ForEach-Object { Write-Host "  $_" }
+}
+else {
+    Write-Host "  (none)" -ForegroundColor DarkGray
+}
