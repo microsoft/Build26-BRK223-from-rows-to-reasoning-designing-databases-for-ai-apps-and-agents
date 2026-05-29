@@ -116,6 +116,8 @@ Quick rehearsal shortcut (manual agent test):
     - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
     - `src/sql/azure/hosting/dab/dab-config.json`
   - Show: `dbo.usp_GenerateMitigation` signature and JSON writeback shape, then `runtime.rest`, `runtime.mcp`, and stored-proc entities (`GenerateMitigation`, `DxIndexExists`, `DxResourcePressure`, `DxDeadlockRecent`).
+  - Say: "DAB is the contract layer: Blazor reads incidents from `/api`, and the agent uses `/mcp` on the same DAB service."
+  - Say: "Blazor calls `api/Incident/IncidentId/{id}` through DAB REST."
 
 7. **Beat 5b (Copilot Chat agent mode):** Run mitigation loop.
   - Tool: GitHub Copilot Chat (agent mode)
@@ -195,6 +197,8 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
   - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
   - `src/sql/azure/hosting/dab/dab-config.json`
 - Show: `dbo.usp_GenerateMitigation` signature and JSON writeback flow first, then `runtime.rest`, `runtime.mcp`, and proc entities (`GenerateMitigation`, `DxIndexExists`, `DxResourcePressure`, `DxDeadlockRecent`)
+- Say: *"DAB is the contract layer: Blazor reads from `/api`, and the agent uses `/mcp` on the same service."*
+- Say: *"Blazor calls `api/Incident/IncidentId/{id}` through DAB REST."*
 - Copilot Chat:
   - Open a **new chat**
   - Select agent `live-site-sql`

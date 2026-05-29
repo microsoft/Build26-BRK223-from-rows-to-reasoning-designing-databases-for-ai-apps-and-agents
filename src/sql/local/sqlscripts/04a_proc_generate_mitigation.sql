@@ -130,8 +130,8 @@ and explain in the rollout_plan rationale. Examples:
   - dx_resource_pressure.finding = ''pressure_high''
       → do NOT propose immediate online DDL or large batched UPDATEs. Reorder
         the plan so heavy operations are scheduled, not applied right now.
-  - dx_deadlock_recent.finding = 'no_deadlock_history'
-      → symptom may already be self-mitigated. Keep confidence at 'medium' unless
+    - dx_deadlock_recent.finding = ''no_deadlock_history''
+      → symptom may already be self-mitigated. Keep confidence at ''medium'' unless
         other signals (multiple matching prior incidents, narrow blast radius) override.
 
 Use LIVE DIAGNOSTICS for immediate action gating and ordering decisions. Do NOT
