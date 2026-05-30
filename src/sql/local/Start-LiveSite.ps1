@@ -15,24 +15,21 @@
 [CmdletBinding()]
 param(
     [switch]$Foreground,
-    [switch]$NoClean
+    [switch]$NoClean,
+    [string]$PasswordFile = $env:BRK223_PASSWORD_FILE
 )
 
 $ErrorActionPreference = 'Stop'
 
 if (-not $env:BRK223_SQL_CONNECTION_STRING) {
-    if (-not $env:BRK223_SQLADMIN_PASSWORD) {
-        $pwFile = Join-Path $PSScriptRoot '..\..\..\_remove-before-publish\local-passwords.txt'
-        if (Test-Path -LiteralPath $pwFile) {
-            $lines = Get-Content -LiteralPath $pwFile
-            $idx = [Array]::IndexOf($lines, 'sqladmin / SA password:')
-            if ($idx -ge 0 -and ($idx + 1) -lt $lines.Count) {
-                $candidate = [string]$lines[$idx + 1]
-                $candidate = $candidate.Trim()
-                if (-not [string]::IsNullOrWhiteSpace($candidate)) {
-                    $env:BRK223_SQLADMIN_PASSWORD = $candidate
-                    Write-Host '[Start-LiveSite] Loaded BRK223_SQLADMIN_PASSWORD from _remove-before-publish/local-passwords.txt' -ForegroundColor DarkGray
-                }
+    if (-not $env:BRK223_SQLADMIN_PASSWORD -and $PasswordFile -and (Test-Path -LiteralPath $PasswordFile)) {
+        $lines = Get-Content -LiteralPath $PasswordFile
+        $idx = [Array]::IndexOf($lines, 'sqladmin / SA password:')
+        if ($idx -ge 0 -and ($idx + 1) -lt $lines.Count) {
+            $candidate = ([string]$lines[$idx + 1]).Trim()
+            if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+                $env:BRK223_SQLADMIN_PASSWORD = $candidate
+                Write-Host "[Start-LiveSite] Loaded BRK223_SQLADMIN_PASSWORD from $PasswordFile" -ForegroundColor DarkGray
             }
         }
     }
