@@ -11,7 +11,8 @@
 - Beat 1 (0:20-1:00)
   - Tool: VS Code + MSSQL extension
   - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
-  - Do: Right-click connection -> Visualize and Design Schema; ask embedded Copilot Chat to describe the schema.
+  - Do: Right-click connection -> Visualize and Design Schema.
+  - Do (optional, internet): Ask embedded Copilot Chat to describe the schema.
   - Say: "Azure SQL engine, six demo tables, one data story."
 
 - Beat 2 (1:00-2:00)
@@ -65,7 +66,7 @@
 | # | Beat | Time | Window | Audience sees |
 |---|---|---|---|---|
 | 0 | Open on the website | 0:00–0:20 | Browser | Zava On-Call Console: SEV1 banner red, incident #5012 ACTIVE, AlertPayload empty / chips empty / AI panel empty ("No mitigation yet…"). *"For the next six minutes I'll show you the SQL that makes this page real."* |
-| 1 | Schema check (designer + Copilot Chat) | 0:20–1:00 | MSSQL ext (Visualize and Design Schema + Copilot Chat) | Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables; open embedded **Copilot Chat** and ask it to describe the schema in English. |
+| 1 | Schema check (designer, optional Copilot Chat) | 0:20–1:00 | MSSQL ext (Visualize and Design Schema; optional Copilot Chat) | Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables. Optional (internet): open embedded **Copilot Chat** and ask it to describe the schema in English. |
 | 2 | Five-feature INSERT → refresh page | 1:00–2:00 | MSSQL ext + editor + browser refresh | Inline INSERT in `05_create_incident.sql`. Then alt-tab to browser, refresh: AlertPayload populates, three regex-derived chips light up, embedding-length verify in editor. |
 | 3 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (run query) + SSMS (plan view) | Run `06_hybrid_search.sql`, then show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
 | 4 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
@@ -89,6 +90,7 @@ Quick rehearsal shortcut (manual agent test):
 2. **Beat 1 (VS Code, MSSQL extension):** Open schema designer.
   - Tool: VS Code + MSSQL extension
   - Action: right-click `localhost,14330 / zavalivesitedb` -> **Visualize and Design Schema**.
+  - Action (optional, internet): ask embedded Copilot Chat for a plain-English schema summary.
   - Show: `Incident`, `IncidentArchive`, `Runbook`, `RunbookChunk`, `AppLog`, `PayrollBatch`.
 
 3. **Beat 2 (VS Code, MSSQL extension):** Insert incident row.
@@ -157,7 +159,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 - Tool: VS Code + MSSQL extension
 - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
 - Show: `Incident`, `IncidentArchive`, `Runbook`, `RunbookChunk`, `AppLog`, `PayrollBatch`
-- Ask embedded Copilot Chat to summarize the schema in plain English
+- Optional (internet): ask embedded Copilot Chat to summarize the schema in plain English
 - Say: *"Six demo tables, one data story."*
 
 ### Beat 2 — INSERT then refresh (1:00)
@@ -225,3 +227,16 @@ WHERE   IncidentId = 5012;
 ```
 
 - Say: *"Same row and JSON contract across local and cloud endpoints."*
+
+## Post-reboot quick start (back to Beat 0)
+
+If you reboot before presenting, run this from `src/sql/local` to return to Beat 0:
+
+1. `docker start azsql-zavalivesite`
+2. `./Reset-ForBeat2.ps1`
+3. `./Warmup-Ai.ps1 -ContainerName azsql-zavalivesite`
+4. `./Verify-Build.ps1`
+5. `./Start-LiveSite.ps1`
+6. `./Open-LiveSite.ps1`
+
+If step 1 fails because the container is missing, run `./prepare-demo.ps1` once, then continue from Beat 0.

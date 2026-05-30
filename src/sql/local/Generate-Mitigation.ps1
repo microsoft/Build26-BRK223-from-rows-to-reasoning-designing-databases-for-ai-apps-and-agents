@@ -7,7 +7,7 @@
 # Pipeline inside the proc:
 #   1. AI_GENERATE_EMBEDDINGS(EngineerNote)   -> mxbai-embed-large via OllamaMxbai
 #   2. HybridSearch (vector + JSON)           -> top-K IncidentArchive + Runbook
-#   3. RAG prompt + sp_invoke_external_rest_endpoint -> phi4-mini chat
+#   3. RAG prompt + sp_invoke_external_rest_endpoint -> phi4 chat
 #   4. UPDATE dbo.Incident SET ProposedMitigation = <model output>
 #
 # After this completes, click Refresh on the website.

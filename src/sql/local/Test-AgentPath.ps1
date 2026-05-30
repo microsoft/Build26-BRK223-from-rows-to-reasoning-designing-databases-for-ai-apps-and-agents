@@ -4,7 +4,7 @@
 #   Claude Opus 4.7 (cloud, agent/tool router)
 #     -> zavalivesite-sql MCP server (DAB at http://localhost:8765/mcp)
 #       -> hybrid_search       (vector + JSON over IncidentArchive/Runbook)
-#       -> generate_mitigation (calls phi4-mini in-container via Caddy)
+#       -> generate_mitigation (calls phi4 in-container via Caddy)
 #       -> read_records etc.   (to surface the proposed mitigation)
 #
 # Captures wall-clock so we know whether Beat 4 is doable live or whether

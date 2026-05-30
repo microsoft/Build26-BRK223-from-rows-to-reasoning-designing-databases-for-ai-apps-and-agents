@@ -464,7 +464,7 @@ if ($SkipAi) {
         $models = (docker exec -u root $ContainerName sh -c "curl -s http://localhost:11434/api/tags" 2>$null) -as [string]
     }
     $hasEmbed = $models -match 'mxbai-embed-large'
-    $hasChat  = $models -match 'phi4-mini'
+    $hasChat  = $models -match 'phi4(?!-mini)'
 
     if ($ollamaPid -and $caddyPid -and $hasEmbed -and $hasChat -and -not $Force) {
         Write-Ok "Ollama PID $ollamaPid, Caddy PID $caddyPid, both models present - skipping Prepare-AiContainer.ps1"

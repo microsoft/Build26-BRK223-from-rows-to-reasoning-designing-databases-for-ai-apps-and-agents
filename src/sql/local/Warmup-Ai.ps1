@@ -3,10 +3,10 @@
     Curtain-up: pre-warm Ollama models so the first on-stage call is instant.
 
 .DESCRIPTION
-    Beat 4 calls phi4-mini exactly once on stage. If the model isn't already
+    Beat 4 calls phi4 exactly once on stage. If the model isn't already
     resident, the first call costs ~80s (mmap weights, allocate KV cache).
     Warm calls are ~15s. This script issues one cheap throwaway chat completion
-    against phi4-mini AND one embedding call against mxbai-embed-large so both
+    against phi4 AND one embedding call against mxbai-embed-large so both
     models are loaded and KV-warm before doors open.
 
     Combined with OLLAMA_KEEP_ALIVE=-1 (set in 03-start-services.sh by
@@ -19,7 +19,7 @@
     Docker container name. Default: azsql-zavalivesite.
 
 .PARAMETER ChatModel
-    Ollama chat model. Default: phi4-mini.
+    Ollama chat model. Default: phi4.
 
 .PARAMETER EmbeddingModel
     Ollama embedding model. Default: mxbai-embed-large.
@@ -30,7 +30,7 @@
 [CmdletBinding()]
 param(
     [string]$ContainerName  = 'azsql-zavalivesite',
-    [string]$ChatModel      = 'phi4-mini',
+    [string]$ChatModel      = 'phi4',
     [string]$EmbeddingModel = 'mxbai-embed-large'
 )
 
