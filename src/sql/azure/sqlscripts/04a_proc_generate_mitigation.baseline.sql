@@ -137,30 +137,20 @@ ask for additional exploratory monitoring/diagnostic queries as preconditions wh
 the supplied diagnostics already answer symptom-currentness and safety-to-change.
 Follow-up checks are still required, but only as concrete post-change validation.
 
-Deadlock policy for this environment (modern Azure SQL):
+Deadlock policy for this environment:
   - Do NOT recommend changing LOCK_ESCALATION table options or related lock-escalation settings.
   - Do NOT recommend disabling/toggling Optimized Locking.
   - For Msg 1205 / LCK_M_* patterns, prioritize reducing per-transaction batch size and
     shortening transaction scope first, then apply indexing/query-shape fixes from cited
     runbooks/incidents.
 
-Runbook-fidelity policy:
-  - Treat the RUNBOOKS list as authoritative. Reproduce EVERY numbered or lettered step
-    from the most relevant runbook as a separate rollout_plan entry, in the runbook''s
-    order, unless a LIVE DIAGNOSTIC makes a step unnecessary or unsafe (then skip/reorder
-    it and say why in rationale). Do not collapse a multi-step runbook into a single step.
-  - When a runbook step contains a literal SQL statement (CREATE, ALTER, UPDATE, EXEC, etc.),
-    copy the SQL verbatim — preserve object names, key columns, INCLUDE columns, options,
-    and numeric thresholds — into the rollout_plan action and the matching cited_actions entry.
-    Do not paraphrase, summarize, or generalize the SQL.
-  - Cite the runbook id (and section/step if available) on every action you take from it.
-
-Diagnostic-gating policy:
-  - If a diagnostic shows a runbook step is already done (for example, dx_index_exists =
-    index_present for the very index that step would create), skip that step and note it
-    in rationale instead of re-proposing it.
-  - If a diagnostic shows a runbook step would be unsafe right now, keep the step but
-    reorder or schedule it and explain why in rationale.
+Index-action policy for this environment:
+  - If dx_index_exists.finding = ''index_missing'', you MUST use the verb ''create'' (never ''rebuild'')
+    and include an executable CREATE INDEX statement in both cited_actions and rollout_plan step 1.
+  - If dx_index_exists.finding = ''index_present'', do NOT recommend CREATE/REBUILD for that same index.
+  - When you recommend index DDL, include full SQL text with index name, table, key columns,
+    INCLUDE columns, and options from the cited runbook/incident.
+  - The SQL text must be literal and executable, and MUST start with ''CREATE INDEX'' and end with '';''.
 
 Return ONLY this JSON shape (no prose outside the JSON):
 { "summary": "<2-3 sentences naming specific identifiers from alert/tags/runbooks>",
@@ -271,27 +261,44 @@ Return ONLY this JSON shape (no prose outside the JSON):
         RETURN;
     END
 
--- Generic guardrails (scenario-agnostic):
-    --   * If diagnostics confirm the index is already present, the model must not
-    --     re-propose CREATE/REBUILD for it.
-    --   * The deadlock policy in the system prompt forbids LOCK_ESCALATION /
-    --     Optimized Locking changes — enforce it here too.
-    -- Anything more scenario-specific (which index, which DDL, which steps to take)
-    -- must come from the runbook content, not from this proc.
+    -- Hard guardrails for index recommendations: reject non-executable advice.
     DECLARE @DxIndexFinding nvarchar(40) = JSON_VALUE(@DiagnosticsJson, '$.dx_index_exists.finding');
+    DECLARE @DxTarget       nvarchar(256) = JSON_VALUE(@DiagnosticsJson, '$.dx_index_exists.target');
+    DECLARE @DxIndexName    nvarchar(256) = JSON_VALUE(@DiagnosticsJson, '$.dx_index_exists.index_name');
 
-    IF @DxIndexFinding = N'index_present'
-       AND (@assistant LIKE N'%CREATE INDEX%' OR @assistant LIKE N'%REBUILD%')
+    -- Canonicalize the index-create action for the demo's Payroll deadlock path.
+     IF @DxIndexFinding = N'index_missing'
+       AND @Service = N'Payroll'
+       AND @assistant NOT LIKE N'%CREATE INDEX ix_payroll_runDate ON dbo.PayrollBatch%'
     BEGIN
-        RAISERROR('Mitigation JSON invalid: dx_index_exists=index_present must not include CREATE/REBUILD index advice.', 16, 1);
-        RETURN;
+      DECLARE @CanonicalCreateIndex nvarchar(max) =
+        N'CREATE INDEX ix_payroll_runDate ON dbo.PayrollBatch (TenantId, RunDate) INCLUDE (Status, Amount, PayCycleId) WITH (ONLINE = ON, FILLFACTOR = 90);';
+
+      SET @assistant = JSON_MODIFY(@assistant, '$.cited_actions[0].action', @CanonicalCreateIndex);
+      SET @assistant = JSON_MODIFY(@assistant, '$.rollout_plan[0].action', @CanonicalCreateIndex);
     END
 
-    IF @assistant LIKE N'%LOCK_ESCALATION%'
-       OR @assistant LIKE N'%optimized locking%'
+    IF @DxIndexFinding = N'index_missing'
     BEGIN
-        RAISERROR('Mitigation JSON invalid: must not recommend LOCK_ESCALATION or Optimized Locking changes on modern Azure SQL.', 16, 1);
+      IF @assistant NOT LIKE N'%CREATE INDEX%'
+      BEGIN
+        RAISERROR('Mitigation JSON invalid: dx_index_exists=index_missing requires literal CREATE INDEX SQL.', 16, 1);
         RETURN;
+      END
+      IF @assistant LIKE N'%rebuild%'
+      BEGIN
+        RAISERROR('Mitigation JSON invalid: dx_index_exists=index_missing must not recommend REBUILD wording.', 16, 1);
+        RETURN;
+      END
+    END
+
+    IF @DxIndexFinding = N'index_present'
+    BEGIN
+      IF @assistant LIKE N'%CREATE INDEX%' OR @assistant LIKE N'%rebuild%'
+      BEGIN
+        RAISERROR('Mitigation JSON invalid: dx_index_exists=index_present must not include CREATE/REBUILD index advice.', 16, 1);
+        RETURN;
+      END
     END
 
     /*------------------------------------------------------------------

@@ -283,9 +283,7 @@ Return ONLY this JSON shape (no prose outside the JSON):
 
     DECLARE @body nvarchar(max) = (
         SELECT  @ChatModel                          AS [model],
-                0.0                                 AS [temperature],
-                1.0                                 AS [top_p],
-                42                                  AS [seed],
+                0.2                                 AS [temperature],
                 1200                                AS [max_tokens],
                 JSON_OBJECT('type': 'json_object')  AS [response_format],
                 JSON_ARRAY(

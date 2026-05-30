@@ -13,7 +13,7 @@
       3. 02-install-caddy.sh
       4. 03-start-services.sh (initial)
       5. 04-pull-model.sh mxbai-embed-large    (1024-dim embeddings)
-      6. 04-pull-model.sh phi4-mini            (chat completions)
+      6. 04-pull-model.sh phi4                 (chat completions, 14B)
       7. 05-trust-caddy-ca.sh
       8. docker restart (so SQLPAL re-reads the CA trust dir)
       9. 03-start-services.sh (services don't auto-start after restart)
@@ -29,7 +29,7 @@
     Ollama embedding model to pull. Default: mxbai-embed-large.
 
 .PARAMETER ChatModel
-    Ollama chat model to pull. Default: phi4-mini.
+    Ollama chat model to pull. Default: phi4.
 
 .PARAMETER SkipRestart
     Skip the docker restart step (only safe if Caddy CA was already trusted in
@@ -43,7 +43,7 @@ param(
     [string]$ContainerName  = 'azsql-zavalivesite',
     [string]$SkillFolder    = '',  # defaults to $PSScriptRoot\skills\container if empty
     [string]$EmbeddingModel = 'mxbai-embed-large',
-    [string]$ChatModel      = 'phi4-mini',
+    [string]$ChatModel      = 'phi4',
     [switch]$SkipRestart
 )
 
