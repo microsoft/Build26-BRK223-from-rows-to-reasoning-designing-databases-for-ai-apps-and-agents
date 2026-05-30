@@ -1,0 +1,4 @@
+# Force LF for shell scripts (run inside Linux containers).
+*.sh text eol=lf
+# Caddyfile is a Linux config file consumed in-container.
+Caddyfile text eol=lf

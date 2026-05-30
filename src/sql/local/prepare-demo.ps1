@@ -52,17 +52,17 @@
     .\prepare-demo.ps1
 
 .EXAMPLE
-    .\prepare-demo.ps1 -PasswordFile ..\..\..\_remove-before-publish\local-passwords.txt
+    .\prepare-demo.ps1 -PasswordFile C:\brk223\local-passwords.txt
 #>
 [CmdletBinding()]
 param(
     [string]$ContainerName = 'azsql-zavalivesite',
     [int]$SqlPort = 14330,
     [string]$SqlImage = '',
-    [string]$SqlImageFile = '..\..\..\_remove-before-publish\private-sql-image orig.txt',
+    [string]$SqlImageFile = $env:BRK223_SQL_IMAGE_FILE,
     [string]$SaPassword = $env:BRK223_SA_PASSWORD,
     [string]$SqlAdminPassword = $env:BRK223_SQLADMIN_PASSWORD,
-    [string]$PasswordFile = '..\..\..\_remove-before-publish\local-passwords.txt',
+    [string]$PasswordFile = $env:BRK223_PASSWORD_FILE,
     [switch]$SkipStart
 )
 

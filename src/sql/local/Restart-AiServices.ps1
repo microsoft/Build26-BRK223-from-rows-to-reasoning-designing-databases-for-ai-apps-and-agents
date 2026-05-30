@@ -56,6 +56,11 @@ Write-Host "=== Step 1: copy 03-start-services.sh into container ===" -Foregroun
 & $docker exec -u root $ContainerName mkdir -p /tmp/ai-prereq | Out-Null
 & $docker cp $script "${ContainerName}:/tmp/ai-prereq/03-start-services.sh" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "docker cp failed." }
+# docker cp on Windows can introduce CRLF line endings, which dash/sh chokes
+# on (e.g. 'set -e\r' becomes 'set: -l: invalid option'). Strip CRs in-place
+# so the script is repeatable regardless of how the file got copied in.
+& $docker exec -u root $ContainerName sed -i 's/\r$//' /tmp/ai-prereq/03-start-services.sh | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "sed CR-strip failed." }
 
 Write-Host ""
 Write-Host "=== Step 2: stop existing ollama + caddy ===" -ForegroundColor Cyan
