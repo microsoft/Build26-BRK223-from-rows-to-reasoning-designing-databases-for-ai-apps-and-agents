@@ -68,7 +68,7 @@
 | 0 | Open on the website | 0:00–0:20 | Browser | Zava On-Call Console: SEV1 banner red, incident #5012 ACTIVE, AlertPayload empty / chips empty / AI panel empty ("No mitigation yet…"). *"For the next six minutes I'll show you the SQL that makes this page real."* |
 | 1 | Schema check (designer, optional Copilot Chat) | 0:20–1:00 | MSSQL ext (Visualize and Design Schema; optional Copilot Chat) | Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables. Optional (internet): open embedded **Copilot Chat** and ask it to describe the schema in English. |
 | 2 | Five-feature INSERT → refresh page | 1:00–2:00 | MSSQL ext + editor + browser refresh | Inline INSERT in `05_create_incident.sql`. Then alt-tab to browser, refresh: AlertPayload populates, three regex-derived chips light up, embedding-length verify in editor. |
-| 3 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (run query) + SSMS (plan view) | Run `06_hybrid_search.sql`, then show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
+| 3 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (open proc + run query) + SSMS (plan view) | Open `01c_proc_hybrid_search.sql` and show `dbo.usp_HybridSearch` — vector side (`vector_distance` over `vec_archive_embedding`) UNION ALL JSON side (`OPENJSON` over `Runbook.Tags`), one statement. Then run `06_hybrid_search.sql` and show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
 | 4 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
 | 5 | DAB → MCP → SKILL-driven agent loop → page lights up | 5:00–6:30 | `04a_proc_generate_mitigation.sql` + `dab-config.json` + Copilot Chat (agent mode, SKILL attached) + browser | (a) Show `usp_GenerateMitigation` first (signature + shape), then `dab-config.json`: REST + MCP from one config; `GenerateMitigation` + the three `dx_*` procs are stored-proc entities. (b) Copilot Chat: select `live-site-sql` agent, type *"Mitigate incident 5012 `@live-site-sql`"* (the `@`-mention forces deterministic skill load — own the choice on stage, see Beat 5(b)). The agent runs the protocol — hybrid_search → dx_index_exists / dx_resource_pressure / dx_deadlock_recent → generate_mitigation (with @DiagnosticsJson) → read back. (c) Alt-tab to browser — AI panel populates with summary, steps, citations, plus a "validated by 3 live diagnostics" badge |
 | 6 | Same page, cloud-hosted backend | 6:30–7:00 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Open the cloud-hosted site (SWA/App Service) and refresh to show the same incident contract via cloud DAB. Same row. Same page shape. *"In production the page lives in SWA/App Service, DAB in Container Apps — lift-and-shift."* |
@@ -99,11 +99,14 @@ Quick rehearsal shortcut (manual agent test):
   - Action: execute INSERT batch, then execute the one-line verify query in the same file.
   - Switch to browser and refresh.
 
-4. **Beat 3 (VS Code + SSMS):** Run hybrid search, show plan in SSMS.
+4. **Beat 3 (VS Code + SSMS):** Show hybrid search proc, run it, show plan in SSMS.
+  - Tool (proc): VS Code editor
   - Tool (run): VS Code + MSSQL extension
   - Tool (plan): SSMS (Actual Execution Plan)
-  - File: `src/sql/local/sqlscripts/06_hybrid_search.sql`
-  - Action: execute proc; in SSMS actual plan, point to:
+  - Files:
+    - `src/sql/local/sqlscripts/01c_proc_hybrid_search.sql` (open and show body of `dbo.usp_HybridSearch` — vector side + JSON side in one statement)
+    - `src/sql/local/sqlscripts/06_hybrid_search.sql` (execute)
+  - Action: open the proc, point to the vector/JSON union; execute `06_hybrid_search.sql`; in SSMS actual plan, point to:
     - `Vector Index Seek` on `vec_archive_embedding`
     - `Index Seek` on `ix_runbook_tags`
 
