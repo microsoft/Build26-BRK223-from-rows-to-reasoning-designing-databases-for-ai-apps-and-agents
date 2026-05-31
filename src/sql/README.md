@@ -370,7 +370,7 @@ Then drive the agent (Beat 4). In VS Code:
 
 The agent runs `read_records → hybrid_search → dx_index_exists →
 dx_resource_pressure → dx_deadlock_recent → generate_mitigation`
-(~110-120 s on phi4-mini), then the page's AI mitigation panel populates
+(~110-120 s on phi4), then the page's AI mitigation panel populates
 on the next 2-second poll.
 
 To tear down:
@@ -498,7 +498,7 @@ Net effect on context-window economics:
 
 A hand-rolled "stuff every protocol into the system prompt" approach for 10
 protocols pays the full token cost on **every** call. With SKILL.md it's the
-difference between a small local model like `phi4-mini` being viable at the
+difference between a local model like `phi4` being viable at the
 edge versus needing a 128k-context cloud model just to hold your own prompts.
 
 The parser is unglamorous: standard YAML frontmatter parse + `File.ReadAllText`
@@ -586,7 +586,7 @@ Agent triage protocol that drives step 4:
 | API | DAB container | DAB on Container Apps |
 | Database | Azure SQL preview container *(or SQL Server 2025)* | Azure SQL Hyperscale |
 | Embedding | `mxbai-embed-large` (Ollama) | `text-embedding-3-small` (AOAI) |
-| Chat | `phi4-mini` (Ollama) | chat model via Azure OpenAI |
+| Chat | `phi4` (Ollama) | chat model via Azure OpenAI |
 
 ---
 
