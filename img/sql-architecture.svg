@@ -121,7 +121,7 @@
 
   <rect class="pill" x="1100" y="374" width="240" height="64" rx="12" ry="12"/>
   <text class="label-mono"   x="1114" y="394">CHAT</text>
-  <text class="label-mono-d" x="1114" y="412">phi4-mini</text>
+  <text class="label-mono-d" x="1114" y="412">phi4</text>
   <text class="label-mono-d" x="1114" y="428">sp_invoke target</text>
 
   <!-- Edges -->

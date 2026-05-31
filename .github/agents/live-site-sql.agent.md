@@ -63,7 +63,7 @@ Then add a short paragraph (3-4 sentences) summarizing what the diagnostics prov
 ## Deployment context
 
 The same protocol works in two deployments — only the chat model behind `generate_mitigation` differs:
-- **Local:** Ollama phi4-mini (chat) + mxbai-embed-large (embeddings) via `sp_invoke_external_rest_endpoint`. Expect 80–120 seconds end-to-end.
+- **Local:** Ollama phi4 (chat) + mxbai-embed-large (embeddings) via `sp_invoke_external_rest_endpoint`. Expect 80–120 seconds end-to-end.
 - **Cloud:** Azure OpenAI gpt-4o-mini (chat) + text-embedding-3-small. Expect 15–20 seconds.
 
 If the end-to-end run exceeds 130 seconds locally, alert the user and suggest checking Ollama process state — do not keep retrying silently.

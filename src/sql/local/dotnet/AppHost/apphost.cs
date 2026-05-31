@@ -24,7 +24,7 @@ var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOpt
 //
 // Command Timeout=180 — raised from the SqlClient default of 30s because
 // dbo.usp_GenerateMitigation calls sp_invoke_external_rest_endpoint to a
-// local phi-4-mini composer that takes ~95s end-to-end. With the default
+// local phi4 composer that takes ~95s end-to-end. With the default
 // 30s timeout, the MCP tool call from the Copilot CLI fails before the
 // composer returns, and the agent falls back to reading stale
 // ProposedMitigation. Microsoft.Data.SqlClient honors `Command Timeout`

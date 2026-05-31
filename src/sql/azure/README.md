@@ -20,7 +20,7 @@ shows the **same proc body** with three different
 
 | Pane | File | URL |
 |---|---|---|
-| Local  | `../local/sqlscripts/04a_proc_generate_mitigation.sql`           | `https://localhost:8445/v1/chat/completions` (Caddy → Ollama phi4-mini) |
+| Local  | `../local/sqlscripts/04a_proc_generate_mitigation.sql`           | `https://localhost:8445/v1/chat/completions` (Caddy → Ollama phi4) |
 | Azure direct  | `sqlscripts/04a_proc_generate_mitigation_direct.sql`     | `https://<aoai>.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=...` |
 | Azure gateway | `sqlscripts/04a_proc_generate_mitigation_gateway.sql`    | `https://<apim>.azure-api.net/openai/deployments/gpt-4o-mini/chat/completions?api-version=...` (with `Ocp-Apim-Subscription-Key`) |
 
