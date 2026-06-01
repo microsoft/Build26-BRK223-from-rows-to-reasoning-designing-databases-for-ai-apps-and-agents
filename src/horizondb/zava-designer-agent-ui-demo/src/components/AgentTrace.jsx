@@ -15,17 +15,6 @@ const FAKE_TOOL_CALLS = [
     },
   },
   {
-    tool: 'get_semantic_context',
-    status: 'success',
-    duration: 80,
-    sql: `SELECT a.attname, col_description(a.attrelid, a.attnum)\nFROM pg_attribute a\nJOIN pg_class c ON a.attrelid = c.oid\nWHERE c.relname = 'product_metadata_demo';`,
-    input: { term: 'mid-century modern living room' },
-    output: {
-      expanded_terms: ['danish modern', 'retro furniture', 'tapered legs'],
-      filter_hint: 'average_rating >= 4.0',
-    },
-  },
-  {
     tool: 'hybrid_search_products',
     status: 'success',
     duration: 1000,

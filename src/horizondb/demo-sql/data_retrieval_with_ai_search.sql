@@ -4,12 +4,15 @@
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 CREATE EXTENSION IF NOT EXISTS pg_fts;
-SET search_path = public, pgfts, "$user";
+CREATE EXTENSION IF NOT EXISTS pg_diskann;
 
-CREATE INDEX IF NOT EXISTS idx_product_rag_3_fts ON public.product_rag_pipeline_build_2026_5_output
+-- Using pg_fts for BM25 Full text search
+SET search_path = public, pgfts, "$user";
+CREATE INDEX IF NOT EXISTS idx_product_rag_fts ON public.product_rag_pipeline_build_2026_output
 USING fts (chunk_text pgfts.text_fts_ops);
 
-CREATE INDEX IF NOT EXISTS idx_product_rag_3_diskann ON public.product_rag_pipeline_build_2026_5_output
+-- Using pg_diskann for vector index
+CREATE INDEX IF NOT EXISTS idx_product_rag_diskann ON public.product_rag_pipeline_build_2026_output
 USING diskann (embedding vector_cosine_ops);
 
 -- =============================================================================
@@ -31,7 +34,8 @@ USING diskann (embedding vector_cosine_ops);
 -- =============================================================================
 -- Product Search: ai.search() with semantic ranking and category filters
 -- Searches for furniture and decor matching the room design query
--- For more information on the hybrid search, check Search "RRF fusion: vector + fulltext" in setup/ai-search.sql
+-- ai.search is currently a custom stored proc at //Build, it will be released in HorizonDB the Summer 2026
+-- For more information on the hybrid search, check Search "RRF fusion: vector + fulltext" in setup/ai-search.sql - Line 777
 -- =============================================================================
 
 -- 1. Seating
@@ -40,10 +44,8 @@ FROM ai.search(
     query => 'mid-century modern furniture for Brooklyn loft living room with wood tones and dark vibe',
     source_table => 'product_rag_pipeline_build_2026_output',
     content_column => 'chunk_text',
-    embedding_column => 'embedding',
-    embedding_model => 'default-embedding',
     search_type => 'hybrid',
     top_k => 50) search 
 JOIN product_rag_pipeline_build_2026_output product_output ON product_output.id = search.id
 JOIN product_sample product ON product.id = product_output.doc_id
-WHERE product.category = 'Chairs'; -- Run across 7 categories: Chairs, Coffee Tables, Lamps & Lighting, Area Rugs, Bookcases, Storage & Organization, Wall Art.
+ORDER BY search.score DESC;

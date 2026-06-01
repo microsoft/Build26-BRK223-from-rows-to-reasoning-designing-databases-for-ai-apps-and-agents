@@ -6,7 +6,6 @@ const ROOM_FURNISHED_PHOTO = '/room-furnished.jpg';
 
 const LOADING_STEPS = [
   { icon: '📷', label: 'Analyzing room photo…', tool: 'analyze_room_photo' },
-  { icon: '🧠', label: 'Understanding your style…', tool: 'get_semantic_context' },
   { icon: '🔍', label: 'Searching 100K products…', tool: 'hybrid_search_products' },
   { icon: '💰', label: 'Applying budget filters…', tool: 'filter_products' },
   { icon: '🕸️', label: 'Finding pieces that pair well…', tool: 'find_related_products' },

@@ -6,17 +6,17 @@
 
 **Core message:** *"One database. Every layer of the AI stack."* — No Pinecone, no Neo4j, no separate reranker service. Vector search, full-text search, graph, multimodal embeddings, reranking, and durable pipelines all run inside one Postgres database.
 
-**The Core Promise:** "I'm going to build Zava Designer Agent — an app that looks at a photo of your living room and tells you exactly which pieces from a 100K+ Zava catalog would make it perfect — and I'm going to build the entire thing, database to frontend, in 20 minutes using nothing but HorizonDB and Copilot CLI."
+**The Core Promise:** "I'm going to build Zava Designer Agent — an app that looks at a photo of your living room and tells you exactly which pieces from a 100K+ Zava catalog would make it perfect — and I'm going to build the entire thing, database to frontend, in 20 minutes using nothing but HorizonDB."
 
 ### Demo flow at a glance
 
 | Act | Title | Duration | What the audience sees |
 |-----|-------|----------|----------------------|
 | 0 | Cold Open | 1 min | Finished app working — upload a room photo, get 6 furniture picks. Hook before any intros. |
-| 1 | RAG Pipeline in Seconds | 5 min | Enable Model Management (one checkbox), then `ai.create_pipeline` chunks + embeds 100K products, `on_change` trigger auto-processes inserts |
+| 1 | RAG Pipeline in Seconds | 5 min | Enable Model Management, then `ai.create_pipeline` chunks + embeds 100K products, `on_change` trigger auto-processes inserts |
 | 2 | Hybrid Search with Reranking | 5 min | `ai.search` across 6 categories — BM25 + DiskANN + semantic reranking in one call |
 | 3 | Graph: Style-Based Discovery | 6 min | Flash style pipeline output (1 min), then Cypher queries traverse Product → Style → SIMILAR_TO → Product |
-| 4 | Full Circle: The Agent | 3 min | Back to Zava Designer Agent — open the tool trace, show all 6 tools calling HorizonDB under the hood |
+| 4 | Full Circle: The Agent | 3 min | Back to Zava Designer Agent — open the tool trace, show all 5 tools calling HorizonDB under the hood |
 | 5 | Production-Ready | 1 min | Sizzle reel of 4 variant consumer apps and internal chatbot. CTA: "Clone the repo." |
 
 ---
@@ -29,7 +29,7 @@
 
 Upload a room photo of a Brooklyn loft. The agent thinks for a few seconds. Six furniture picks appear on the photo — a coffee table, an accent chair, a lamp, a rug, a bookshelf, wall art. Prices, ratings, a running budget total.
 
-**Say:** "This app just analyzed a photo, searched a 100K product catalog, traversed a style graph, reranked the results, and picked six pieces that fit this room — all from a single Postgres database. Let me show you how to build it."
+**Say:** "This app just analyzed a photo, searched the product catalog, traversed a style graph, reranked the results, and picked six pieces that fit this room — all from a single Postgres database. Let me show you how to build it."
 
 **Then:** Brief intro — who you are, what HorizonDB is, and the promise: *"Database to frontend, 20 minutes, one database."*
 
@@ -60,6 +60,15 @@ Key columns to highlight on the visual:
 
 ### Build the pipeline
 
+Today most generative AI apps rebuild the same steps:
+
+*   Chunking
+*   Creating embeddings
+*   Backfilling data
+
+These steps are often in fragile external pipelines. With AI pipelines, all of this is built directly into Postgres. 
+
+
 Show a pipeline that chunks and embeds product data. The `content` column (title + description + categories + store + features) gives richer embeddings than description alone.
 
 ```sql
@@ -77,8 +86,13 @@ SELECT ai.run('product_rag_pipeline_build_2026');
 ```
 
 **Sub-beats:**
-- Monitor with `ai.status()` and `ai.list_pipelines()`
+
+- Monitor with AI Pipeline in VSCode
+  I can then go ahead and run this. If I count the records in the output table, you can see that it's increasing. This is all happening asynchronously in the background so that it's not blocking or really having any real performance impact on my transactional workload.  
+
 - Insert a new product → `on_change` trigger picks it up automatically
+  
+  The best thing about this pipeline is that it's durable (using pg_durable OSS extension). This means that I can pause it and you can see here that the row count stops increasing even if the workload continues. I can resume it. Think of it as a reliable background task. If my server fails over, it's no problem. The AI pipeline fails over as well and it just keeps running. All that pipeline complexity then just moves into the database and reduces the complexity and runs reliably. Exactly and building on this
 
 ### Show the output table (~30 seconds)
 
@@ -104,6 +118,10 @@ LIMIT 5;
 
 **Feature:** `ai.search`, DiskANN, pg_fts BM25, semantic reranking
 
+1. Let me create the right indexes to do the search. First, I'll create the vector index for the vector search, and I also create a full text search index. We're going to be using pg_fts, which is a new extension we have to do full text search, BM25 full text search, a similar algorithm you with find in most production search engines. 
+2. This is not shipped yet, so I'm using my stored procedure just to show you guys what it would be like when it ships. 
+3. Show Query visualization. 
+
 Search the product catalog with natural language, filtered by category.
 
 ```sql
@@ -111,14 +129,16 @@ SELECT product.title, product.price, search.score
 FROM ai.search(
     query => 'mid-century modern furniture for Brooklyn loft living room with wood tones and dark vibe',
     source_table => 'product_metadata_demo',
-    embedding_column => 'embedding',
-    rerank => true,
-    filter => 'categories @> ''["Chairs"]'''
+    embedding_column => 'embedding'
 ) search
 JOIN product_metadata_demo product ON product.id = search.id;
+ORDER BY score
 ```
 
 Run across 6 categories: Chairs, Coffee Tables, Lamps & Lighting, Area Rugs, Bookcases, Wall Art.
+
+**Sub-beats:**
+- Flip back to the Agent app. Open the Agent tools and walk through how the agent was able to analyze a room with a tool and then do the search. 
 
 ---
 
@@ -172,26 +192,12 @@ Three node types, three edge types:
 (:Style)-[:SIMILAR_TO]->(:Style)            ← from ai.generate output
 ```
 
-### Live demo query 1 — Same style, cross-category (~30 seconds)
-
-```sql
--- "I picked this coffee table. What rugs, lamps, and chairs match its style?"
-SELECT * FROM ag_catalog.cypher('style_graph', $$
-    MATCH (seed:Product {id: 10414})-[e1:HAS_STYLE]->(s:Style)<-[e2:HAS_STYLE]-(rec:Product)
-    MATCH (seed)-[e3:IN_CATEGORY]->(seedCat:Category)
-    MATCH (rec)-[e4:IN_CATEGORY]->(recCat:Category)
-    WHERE seedCat.name <> recCat.name
-    RETURN seed, e1, s, e2, rec, e3, seedCat, e4, recCat
-    LIMIT 10
-$$) AS (seed agtype, e1 agtype, style agtype, e2 agtype, rec agtype, e3 agtype, seedCat agtype, e4 agtype, recCat agtype);
-```
-
-### Live demo query 2 — 2-hop via SIMILAR_TO (the wow moment)
+### Live demo query 1 — 2-hop via SIMILAR_TO (the wow moment)
 
 ```sql
 -- "Products in styles SIMILAR to mine, across different categories"
 SELECT * FROM ag_catalog.cypher('style_graph', $$
-    MATCH (seed:Product {id: 10414})-[e1:HAS_STYLE]->(s:Style)-[e2:SIMILAR_TO]->(related:Style)<-[e3:HAS_STYLE]-(rec:Product)
+    MATCH (seed:Product {id: 2315})-[e1:HAS_STYLE]->(s:Style)-[e2:SIMILAR_TO]->(related:Style)<-[e3:HAS_STYLE]-(rec:Product)
     MATCH (seed)-[e4:IN_CATEGORY]->(seedCat:Category)
     MATCH (rec)-[e5:IN_CATEGORY]->(recCat:Category)
     WHERE seedCat.name <> recCat.name
@@ -200,7 +206,7 @@ SELECT * FROM ag_catalog.cypher('style_graph', $$
 $$) AS (seed agtype, e1 agtype, style agtype, e2 agtype, related agtype, e3 agtype, rec agtype, e4 agtype, seedCat agtype, e5 agtype, recCat agtype);
 ```
 
-**English:** "My coffee table is Mid-Century Modern. The AI says Scandinavian and Industrial are similar. Show me Scandinavian chairs and Industrial lamps — products I'd never find with a simple style filter."
+**English:** "My Chair is Mid-Century Modern. The AI says Scandinavian and Industrial are similar. Show me Scandinavian chairs and Industrial lamps — products I'd never find with a simple style filter."
 
 **The payoff moment:** "The AI discovered style relationships. The graph traverses them. You get recommendations that cross both categories AND styles — all from Postgres."
 
@@ -220,20 +226,19 @@ This is the money query — discovers products you'd never find with a filter, w
 
 Switch back to the Zava Designer Agent UI. Type the same prompt from earlier — *"mid-century modern furniture for Brooklyn loft living room with wood tones"* — and hit enter.
 
-While the agent is thinking, **open the tool trace panel** to show the 6-tool pipeline executing in real time:
+While the agent is thinking, **open the tool trace panel** to show the 5-tool pipeline executing in real time:
 
 | Step | Tool | What it calls in HorizonDB | Purpose |
 |------|------|---------------------------|---------|
 | 1 | `analyze_room_photo` | `azure_ai.generate()` | LLM reads the room photo and identifies style, colors, existing furniture, and gaps |
-| 2 | `get_semantic_context` | `pg_catalog` column comments + `semantic_dictionary` | Reads the schema to understand what columns exist and expands style terms. So every search call is intentional, not fuzzy guesswork. |
-| 3 | `hybrid_search_products` | `ai.search()` × 6 categories | BM25 + DiskANN + reranking — one search per category (Chairs, Coffee Tables, Lamps, Rugs, Bookcases, Wall Art) |
-| 4 | `find_related_products` | AGE Cypher / `bought_together` JOIN | Graph traversal to find products connected by style or purchase patterns |
-| 5 | `filter_products` | SQL `WHERE` on price + rating | Enforces budget ceiling per item and minimum 4.0★ rating |
-| 6 | `curate_room_picks` | `azure_ai.rank()` | Semantic reranking of all candidates against the room description, then best-per-category selection |
+| 2 | `hybrid_search_products` | `ai.search()` × 6 categories | BM25 + DiskANN + reranking — one search per category (Chairs, Coffee Tables, Lamps, Rugs, Bookcases, Wall Art) |
+| 3 | `find_related_products` | AGE Cypher / `bought_together` JOIN | Graph traversal to find products connected by style or purchase patterns |
+| 4 | `filter_products` | SQL `WHERE` on price + rating | Enforces budget ceiling per item and minimum 4.0★ rating |
+| 5 | `curate_room_picks` | `azure_ai.rank()` | Semantic reranking of all candidates against the room description, then best-per-category selection |
 
-**Key talking point:** "Six tools, one database. The room analysis, the search, the graph traversal, the reranking — every single call goes to HorizonDB. There's no external vector database, no separate ML service, no graph database running alongside. It's all Postgres."
+**Key talking point:** "Five tools, one database. The room analysis, the search, the graph traversal, the reranking — every single call goes to HorizonDB. There's no external vector database, no separate ML service, no graph database running alongside. It's all Postgres."
 
-**Show the trace output** — each tool returns its duration, inputs, and outputs. Point out the total latency: all 6 tools complete in ~3-5 seconds.
+**Show the trace output** — each tool returns its duration, inputs, and outputs. Point out the total latency: all 5 tools complete in ~3-5 seconds.
 
 **Close the loop:** The products appear on the room photo as interactive dots. The sidebar shows prices, ratings, and a running budget total. "This is what it looks like when you build an AI-native application on a single database."
 
@@ -268,29 +273,6 @@ While the agent is thinking, **open the tool trace panel** to show the 6-tool pi
 | Style graph built | Done (test) | 60 Products, 7 Styles, 6 Categories, 12 SIMILAR_TO edges. Tested on `product_sample` subset |
 | Seed product identified | Done | Product 10414: WLIVE Lift Top Coffee Table (Mid-Century Modern, Coffee Tables) |
 | SIMILAR_TO edges tested | Done | 2-hop query returns Industrial Bookcases and Lamps from Mid-Century Modern seed |
-| Zava Designer Agent running | Needed | `cd zava-designer-agent-ui-demo && npm run dev` — server on :3001, UI on :5173 |
+| Zava Designer Agent running | Needed | `cd zava-designer-agent-ui-demo && npm run dev:full` — server on :3001, UI on :5180 |
 | Zava Designer Agent `.env` pointed at demo server | Needed | `PGHOST`, `PGDATABASE=postgres`, `PGUSER`, `PGPASSWORD` for May12-Horizon |
 | Tool trace panel visible | Needed | Ensure trace accordion is open before demo so audience sees tool-by-tool execution |
-
----
-
-## Server Details
-
-- **Server:** May12-Horizon (`may12-10am-horizondb-uksouth.a82b209a23c8.uksouth.horizondb.azure.com`)
-- **Database:** `build_2026` (graph + style data tested here) / `postgres` (pipelines run here)
-- **Table:** `product_metadata_demo` (~100K rows, ~1.8 GB) in `postgres`; `product_sample` (60 rows) in `build_2026` for testing
-- **Extensions needed:** `pg_fts`, `age`, `azure_ai`, `vector` — all installed on `build_2026`
-- **Blocker:** `default-chat` model deployment missing on Azure OpenAI endpoint `abes-demo-ai-foundry.openai.azure.com` — pipelines create but fail at inference
-
----
-
-## Key Decisions Made
-
-1. **Dropped BOUGHT_TOGETHER graph** — data is empty across all servers
-2. **ai.extract for styles** instead of manual tagging — shows AI Pipelines doing intelligent enrichment
-3. **Graph is pre-built**, only the traversal query runs live — keeps demo tight
-4. **Simple 1-hop graph query live**, 2-hop talked through verbally — avoids complexity overload
-5. **No pg_durable in live demo** — could orchestrate style extraction + graph build, but adds too much to explain
-6. **`content` column** combines title + description + categories + store + features for richer embeddings
-7. **Style extraction merged into graph act** — 60s flash of pipeline output + 3 rows, then straight into Cypher queries. Saves ~3 min vs. standalone act.
-8. **ACT 4 wraps back to the app** — shows the tool trace so the audience sees that every capability demoed in ACTs 1-3 is what the agent actually calls under the hood
