@@ -1,54 +1,4 @@
-# BRK223 — 7-Minute Demo Flow
-
-## Presenter cheat sheet (one page)
-
-- Beat 0 (0:00-0:20)
-  - Tool: Browser
-  - Run: `./Open-LiveSite.ps1`
-  - Do: Show empty state.
-  - Say: "One SQL row will light up this page."
-
-- Beat 1 (0:20-1:00)
-  - Tool: VS Code + MSSQL extension
-  - Open: Schema Designer on `localhost,14330 / zavalivesitedb`
-  - Do: Right-click connection -> Visualize and Design Schema.
-  - Do (optional, internet): Ask embedded Copilot Chat to describe the schema.
-  - Say: "Azure SQL engine, six demo tables, one data story."
-
-- Beat 2 (1:00-2:00)
-  - Tool: VS Code + MSSQL extension
-  - Open file: `src/sql/local/sqlscripts/05_create_incident.sql`
-  - Do: Run INSERT, run verify, refresh browser.
-  - Say: "JSON + regex + embeddings in one statement."
-
-- Beat 3 (2:00-3:00)
-  - Tool (run): VS Code + MSSQL extension
-  - Tool (plan): SSMS Actual Execution Plan
-  - Open file: `src/sql/local/sqlscripts/06_hybrid_search.sql`
-  - Do: Run proc; in SSMS point to `Vector Index Seek` (`vec_archive_embedding`) and `Index Seek` (`ix_runbook_tags`).
-  - Say: "One query, two index families; SSMS is used because VS Code plan rendering is inconsistent for vector operators."
-
-- Beat 4 (4:30-5:00)
-  - Tool: VS Code + MSSQL extension
-  - Open file: `src/sql/local/sqlscripts/07_log_timeline.sql`
-  - Do: Run timeline query for incident 5012.
-  - Say: "Tamper-evident ledger timeline, no external pipeline."
-
-- Beat 5 (5:00-6:30)
-  - Tool: VS Code editor + Copilot Chat (agent mode) + Browser
-  - Open files:
-    - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
-    - `src/sql/azure/hosting/dab/dab-config.json`
-  - Do: Show `usp_GenerateMitigation` signature/body shape first, then `runtime.rest` + `runtime.mcp`; new chat; select `live-site-sql`; run `Mitigate incident 5012 @live-site-sql`; after the response, show Chat Debug View with tool-call trace; switch to browser and show mitigation.
-  - Say: "Grounded plan from corpus + live diagnostics in one loop."
-
-- Beat 6 (6:30-7:00)
-  - Tool: VS Code editor split + MSSQL extension (Hyperscale)
-  - Open files:
-    - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
-    - `src/sql/azure/sqlscripts/04a_proc_generate_mitigation.sql`
-  - Do: Show same proc shape across local/cloud; run cloud summary select for incident 5012.
-  - Say: "Same row and JSON contract across local and cloud endpoints."
+# BRK223 — 6:30 Demo Flow
 
 > Live on laptop. Three surfaces audience sees:
 > **(1)** the **Zava On-Call Console** — a Blazor WebAssembly app served locally by the Aspire AppHost, fetching from DAB REST.
@@ -69,11 +19,10 @@
 | 1 | Schema check (designer, optional Copilot Chat) | 0:20–1:00 | MSSQL ext (Visualize and Design Schema; optional Copilot Chat) | Right-click connection → **Visualize and Design Schema** — canvas shows the 6 demo tables. Optional (internet): open embedded **Copilot Chat** and ask it to describe the schema in English. |
 | 2 | Five-feature INSERT → refresh page | 1:00–2:00 | MSSQL ext + editor + browser refresh | Inline INSERT in `05_create_incident.sql`. Then alt-tab to browser, refresh: AlertPayload populates, three regex-derived chips light up, embedding-length verify in editor. |
 | 3 | Hybrid search: two indexes, one statement | 2:00–3:00 | MSSQL ext (open proc + run query) + SSMS (plan view) | Open `01c_proc_hybrid_search.sql` and show `dbo.usp_HybridSearch` — vector side (`vector_distance` over `vec_archive_embedding`) UNION ALL JSON side (`OPENJSON` over `Runbook.Tags`), one statement. Then run `06_hybrid_search.sql` and show actual plan in SSMS: **Vector Index Seek** on `vec_archive_embedding` (DiskANN, incident side) AND **JSON Index Seek** on `ix_runbook_tags` ($.service, runbook side). |
-| 4 | Ledger timeline | 4:30–5:00 | MSSQL ext: `07_log_timeline.sql` | `SELECT TOP 10 * FROM dbo.AppLog WHERE IncidentId=5012 ORDER BY ts;` — append-only ledger, tamper-evident, no external storage |
-| 5 | DAB → MCP → SKILL-driven agent loop → page lights up | 5:00–6:30 | `04a_proc_generate_mitigation.sql` + `dab-config.json` + Copilot Chat (agent mode, SKILL attached) + browser | (a) Show `usp_GenerateMitigation` first (signature + shape), then `dab-config.json`: REST + MCP from one config; `GenerateMitigation` + the three `dx_*` procs are stored-proc entities. (b) Copilot Chat: select `live-site-sql` agent, type *"Mitigate incident 5012 `@live-site-sql`"* (the `@`-mention forces deterministic skill load — own the choice on stage, see Beat 5(b)). The agent runs the protocol — hybrid_search → dx_index_exists / dx_resource_pressure / dx_deadlock_recent → generate_mitigation (with @DiagnosticsJson) → read back. (c) Alt-tab to browser — AI panel populates with summary, steps, citations, plus a "validated by 3 live diagnostics" badge |
-| 6 | Same page, cloud-hosted backend | 6:30–7:00 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Open the cloud-hosted site (SWA/App Service) and refresh to show the same incident contract via cloud DAB. Same row. Same page shape. *"In production the page lives in SWA/App Service, DAB in Container Apps — lift-and-shift."* |
+| 4 | DAB → MCP → SKILL-driven agent loop → page lights up | 4:30–6:00 | `04a_proc_generate_mitigation.sql` + `dab-config.json` + Copilot Chat (agent mode, SKILL attached) + browser | (a) Show `usp_GenerateMitigation` first (signature + shape), then `dab-config.json`: REST + MCP from one config; `GenerateMitigation` + the three `dx_*` procs are stored-proc entities. (b) Copilot Chat: select `live-site-sql` agent, type *"Mitigate incident 5012 `@live-site-sql`"* (the `@`-mention forces deterministic skill load — own the choice on stage, see Beat 4(b)). The agent runs the protocol — hybrid_search → dx_index_exists / dx_resource_pressure / dx_deadlock_recent → generate_mitigation (with @DiagnosticsJson) → read back. (c) Alt-tab to browser — AI panel populates with summary, steps, citations, plus a "validated by 3 live diagnostics" badge |
+| 5 | Same page, cloud-hosted backend | 6:00–6:30 | MSSQL ext split + browser | MSSQL ext split: container side (`OllamaMxbai` EXTERNAL MODEL + `sp_invoke` to local `phi4`) vs Hyperscale side (`AoaiTextEmbed3Small` EXTERNAL MODEL + `sp_invoke` to AOAI `gpt-4o-mini`). Open the cloud-hosted site (SWA/App Service) and refresh to show the same incident contract via cloud DAB. Same row. Same page shape. *"In production the page lives in SWA/App Service, DAB in Container Apps — lift-and-shift."* |
 
-Total: 7:00. *(Beat 3 reclaimed 1:30 from the old slow→fast version — spend it on Beat 5 or trim the talk.)*
+Total: 6:30. *(Append-only ledger discussion moved to the architecture talk — see [README.md §6](README.md) and [design.md](design.md). Beat 3 still has the reclaimed 1:30 buffer — spend it on Beat 4 or trim the talk.)*
 
 ---
 
@@ -81,7 +30,7 @@ Total: 7:00. *(Beat 3 reclaimed 1:30 from the old slow→fast version — spend 
 
 Quick rehearsal shortcut (manual agent test):
 
-- Run `./Reset-AgentTestState.ps1` from `src/sql/local/` to reset and reinsert incident 5012 in one command before Beat 5.
+- Run `./Reset-AgentTestState.ps1` from `src/sql/local/` to reset and reinsert incident 5012 in one command before Beat 4.
 
 1. **Beat 0 (Browser):** Run `./Open-LiveSite.ps1`.
   - Tool: Browser
@@ -110,12 +59,7 @@ Quick rehearsal shortcut (manual agent test):
     - `Vector Index Seek` on `vec_archive_embedding`
     - `Index Seek` on `ix_runbook_tags`
 
-5. **Beat 4 (VS Code, MSSQL extension):** Show ledger timeline.
-  - Tool: VS Code + MSSQL extension
-  - File: `src/sql/local/sqlscripts/07_log_timeline.sql`
-  - Action: execute query and show append-only timeline rows for incident 5012.
-
-6. **Beat 5a (VS Code editor):** Show `usp_GenerateMitigation`, then DAB REST + MCP config.
+5. **Beat 4a (VS Code editor):** Show `usp_GenerateMitigation`, then DAB REST + MCP config.
   - Tool: VS Code editor
   - Files:
     - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
@@ -124,27 +68,27 @@ Quick rehearsal shortcut (manual agent test):
   - Say: "DAB is the contract layer: Blazor reads incidents from `/api`, and the agent uses `/mcp` on the same DAB service."
   - Say: "Blazor calls `api/Incident/IncidentId/{id}` through DAB REST."
 
-7. **Beat 5b (Copilot Chat agent mode):** Run mitigation loop.
+6. **Beat 4b (Copilot Chat agent mode):** Run mitigation loop.
   - Tool: GitHub Copilot Chat (agent mode)
   - Action: select `live-site-sql` agent and run prompt: `Mitigate incident 5012 @live-site-sql`
   - Show: tool sequence (`hybrid_search`, `dx_*`, `generate_mitigation`) in Chat Debug View after the agent response.
 
-8. **Beat 5c (Browser):** Confirm page lights up.
+7. **Beat 4c (Browser):** Confirm page lights up.
   - Tool: Browser
   - Show: mitigation summary, steps, citations, and diagnostics badge.
 
-9. **Beat 6a (VS Code editor split):** Show same proc pattern, local vs cloud.
+8. **Beat 5a (VS Code editor split):** Show same proc pattern, local vs cloud.
   - Tool: VS Code editor (3-pane split)
   - Files:
     - `src/sql/local/sqlscripts/04a_proc_generate_mitigation.sql`
     - `src/sql/azure/sqlscripts/04a_proc_generate_mitigation.sql`
   - Show: identical shape; URL/credential target differs (local, APIM/AOAI cloud).
 
-10. **Beat 6b (MSSQL extension):** Show cloud row values.
+9. **Beat 5b (MSSQL extension):** Show cloud row values.
    - Tool: VS Code + MSSQL extension (Hyperscale connection)
    - Action: run `SELECT IncidentId, JSON_VALUE(ProposedMitigation,'$.summary'), JSON_VALUE(ProposedMitigation_v2,'$.summary') FROM dbo.Incident WHERE IncidentId=5012;`
 
-11. **Close:** same row, same contract, local and cloud paths.
+10. **Close:** same row, same contract, local and cloud paths.
 
 ## Beat-by-beat detail (concise operator script)
 
@@ -185,15 +129,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
   - `Index Seek` on `ix_runbook_tags`
 - Say: *"Same query, two specialized index families, one optimizer plan. I am showing the plan in SSMS because VS Code plan rendering is currently inconsistent for vector operators."*
 
-### Beat 4 — Ledger timeline (0:30)
-
-- Tool: VS Code + MSSQL extension
-- Open file: `src/sql/local/sqlscripts/07_log_timeline.sql`
-- Run: timeline query for incident 5012
-- Show: append-only deadlock sequence around 14:30 UTC
-- Say: *"Tamper-evident app timeline in SQL ledger, no external pipeline."*
-
-### Beat 5 — Agent loop + page update (1:30)
+### Beat 4 — Agent loop + page update (1:30)
 
 - Tool: VS Code editor + Copilot Chat agent mode + Browser
 - Open files:
@@ -212,7 +148,7 @@ Use this section during rehearsal and on stage. It mirrors the runbook above but
 - Show: mitigation summary, citations, diagnostics badge
 - Say: *"The agent grounded each step in corpus evidence plus live diagnostics from the same database."*
 
-### Beat 6 — Local vs cloud path (0:40)
+### Beat 5 — Local vs cloud path (0:30)
 
 - Tool: VS Code editor split + MSSQL extension (Hyperscale)
 - Open files in split view:
