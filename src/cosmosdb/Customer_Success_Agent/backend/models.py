@@ -30,7 +30,7 @@ class ChatMessage(BaseModel):
 
 class NewTicketRequest(BaseModel):
     title: str
-    product: str = "Microsoft Cloud"
+    product: str = "Product Adoption"
     priority: str = "Medium"
 
 

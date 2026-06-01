@@ -40,6 +40,4 @@ export const api = {
   process: (userId, threadId) => request(`/api/users/${userId}/tickets/${threadId}/process`, {
     method: "POST",
   }),
-  seed: (process = false) => request(`/api/demo/seed?process=${process ? "true" : "false"}`, { method: "POST" }),
-  reset: () => request("/api/demo/reset", { method: "POST" }),
 };

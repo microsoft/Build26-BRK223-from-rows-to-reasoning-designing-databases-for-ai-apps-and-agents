@@ -24,4 +24,4 @@ The toolkit's processing pipeline can run in-process for a zero-infrastructure l
 
 ## Where To Start
 
-Open the [Support Engineer Agent README](Support_Engineer_Agent/README.md) for setup, configuration, and run instructions.
+Open the [Customer Support Agent README](Customer_Support_Agent/README.md) for setup, configuration, and follow the instructions.
