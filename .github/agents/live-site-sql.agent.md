@@ -20,7 +20,7 @@ Invoke this agent for prompts about live incidents on Zava systems, especially s
 ## Protocol (do not skip steps)
 
 1. **Read the incident record.** Call `read_records` on entity `Incident` filtered to the IncidentId in the prompt. Capture tenant, service, severity, AlertPayload (JSON), and any engineer note.
-2. **Retrieve evidence.** Call `hybrid_search` with tenantId, the engineer note as the question, the errorCode from AlertPayload, and topK=3. Capture top runbook(s) and prior incident(s).
+2. **Retrieve evidence.** Call `hybrid_search` with `Question` set to the **verbatim** `EngineerNote` string from step 1 (do NOT summarize, paraphrase, or shorten it — pass it byte-for-byte), `TenantId` from the incident, `ErrorCode` from `AlertPayload`, and `TopK=3`. Capture top runbook(s) and prior incident(s).
 3. **Validate runbook against live state.** For each recommended action in the top runbook, decide which diagnostic(s) prove it is still relevant *and* safe to execute now. Available diagnostics:
    - `dx_index_exists(SchemaName, TableName, IndexName)` — proves whether a recommended index already exists; returns `index_missing` or `index_present`.
    - `dx_resource_pressure(WindowMinutes)` — measures runnable tasks, scheduler count, average log write latency over the last N minutes; returns `pressure_normal` or `pressure_high`.

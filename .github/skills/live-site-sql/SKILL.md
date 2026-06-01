@@ -30,9 +30,13 @@ WRITELOG, plan regression, log full, tempdb pressure, CPU spike.
    `Severity`, `EngineerNote`, `Tags` (errorCode, build, waitType),
    `AlertPayload`.
 
-2. **Retrieve evidence.** Call `hybrid_search` with the engineer's
-   note as `Question`, the tenant id, the error code from `Tags`,
-   and `topK=3`. Read every returned row. The result set has rows
+2. **Retrieve evidence.** Call `hybrid_search` with `Question`
+   set to the **verbatim** `EngineerNote` from step 1. Do NOT
+   summarize, paraphrase, extract keywords, or shorten it — pass
+   the full original string byte-for-byte. The embedding model is
+   trained on natural prose; a hand-crafted summary degrades recall.
+   Also pass the tenant id, the error code from `Tags`, and
+   `topK=3`. Read every returned row. The result set has rows
    with `source` ('incident' | 'runbook'), `id`, `title`, `body`,
    `distance`. Lower distance = better match.
 
