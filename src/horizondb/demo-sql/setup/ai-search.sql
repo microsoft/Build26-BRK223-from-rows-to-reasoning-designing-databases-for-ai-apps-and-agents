@@ -759,6 +759,9 @@ DROP FUNCTION IF EXISTS ai.search(text, int, int, int, text, text);
 DROP FUNCTION IF EXISTS ai.search(text, boolean, int, int, int, text, text, text);
 DROP FUNCTION IF EXISTS ai.search(text, text, text, int, int, int);
 DROP FUNCTION IF EXISTS ai.search(text, text, text, boolean, int, int, int, text);
+-- Stale 13-arg overload (matched ai.search_orig's signature); collides with the
+-- rerank overload below and causes "function ai.search is not unique" at call time.
+DROP FUNCTION IF EXISTS ai.search(text, text, text, int, int, text, text, text, text, text, text, boolean, text);
 
 -- Overload 1: no reranking.
 CREATE OR REPLACE FUNCTION ai.search(
@@ -954,40 +957,6 @@ SELECT * FROM ai.search_orig(
     search_type      => 'hybrid',
     content_column   => 'title',
     embedding_column => 'embedding',
-    title_column     => 'title',
-    top_k            => 10,
-    rerank           => false
-);
-
--- 4i. Product search with reranking
-SELECT * FROM ai.search_orig(
-    'quiet space heater for bedroom energy efficient',
-    source_table     => 'product_sample',
-    search_type      => 'hybrid',
-    content_column   => 'title',
-    embedding_column => 'embedding',
-    title_column     => 'title',
-    top_k            => 7,
-    rerank           => true
-);
-
--- 4j. Vector-only product search
-SELECT * FROM ai.search_orig(
-    'bohemian area rug for living room loft warm tones',
-    source_table     => 'product_sample',
-    search_type      => 'vector',
-    embedding_column => 'embedding',
-    title_column     => 'title',
-    top_k            => 10,
-    rerank           => false
-);
-
--- 4k. BM25-only product search
-SELECT * FROM ai.search_orig(
-    'VASAGLE bookshelf industrial rustic',
-    source_table     => 'product_sample',
-    search_type      => 'fulltext',
-    content_column   => 'title',
     title_column     => 'title',
     top_k            => 10,
     rerank           => false

@@ -11,12 +11,12 @@ SELECT * FROM model_registry.model_list_all();
 SELECT azure_openai.create_embeddings(input => 'hello world');
 
 -- ---------------------------------------------------------------------------
--- ACT 0 PART B — View the Dataset
+-- ACT 0 — View the Dataset
 -- Using a subset of the data for demonstration purposes.
 -- Also show the data types and constraints in the schema viewer
 -- ---------------------------------------------------------------------------
 
-SELECT title, description, categories, price, average_rating, rating_number, content, images FROM product_sample LIMIT 5;
+SELECT title, content, categories, price, average_rating, rating_number, images FROM product_sample LIMIT 5;
 
 -- ---------------------------------------------------------------------------
 -- ACT 1 — RAG Pipeline in Seconds
@@ -34,26 +34,26 @@ SELECT ai.create_pipeline(
                  dimensions => 1536,
                  batch_size => 10)
     ],
-    trigger => 'on_change'
+    trigger => 'on_change' -- Run the pipeline on every change to the source table and not the entire table.
 );
 -- Auto-creates: public.{pipeline_name}_output (doc_id, chunk_index, chunk_text, embedding, ...)
 
-SELECT ai.run('product_rag_pipeline_build_2026_5');
+SELECT ai.run('product_rag_pipeline_build_2026');
 
 -- ---------------------------------------------------------------------------
 -- ACT 1B — Monitor Pipeline 
 -- Show in VSCode extension as well
 -- ---------------------------------------------------------------------------
 
-SELECT * FROM ai.status('product_rag_pipeline_build_2026_5');
+SELECT * FROM ai.status('product_rag_pipeline_build_2026');
 SELECT * FROM ai.list_pipelines();
 
 -- ---------------------------------------------------------------------------
 -- ACT 1C — Look at output table
 -- ---------------------------------------------------------------------------
 
-SELECT count(*) FROM product_rag_pipeline_build_2026_5_output;
-SELECT doc_id, chunk_index, chunk_text, LEFT(chunk_text, 100) AS embedding_preview FROM product_rag_pipeline_build_2026_5_output LIMIT 5;
+SELECT count(*) FROM product_rag_pipeline_build_2026_output;
+SELECT doc_id, chunk_index, chunk_text, embedding FROM product_rag_pipeline_build_2026_output LIMIT 5;
 
 -- ---------------------------------------------------------------------------
 -- ACT 1D — Vector Search
@@ -86,6 +86,6 @@ SELECT count(*) FROM product_rag_pipeline_build_2026_output;
 SELECT *
      FROM product_rag_pipeline_build_2026_output
      ORDER BY embedding <=> azure_openai.create_embeddings(
-                                'text-embedding-3-small',
+                                'default-embedding',
                                 'Best chair that is comfortable for a living room')::vector
      LIMIT 5;

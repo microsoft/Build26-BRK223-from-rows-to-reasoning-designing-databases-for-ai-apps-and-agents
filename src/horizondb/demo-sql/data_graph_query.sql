@@ -25,11 +25,9 @@ SELECT ai.create_pipeline(
 
 SELECT ai.run('style_tagger');
 
--- SELECT ai.drop('style_tagger');
-
 -- ─── ACT 2: Create style graph ─────────────────────
--- Create a graph from the style tagger output in the database, using setup/graph_setup.sql
--- \i setup/graph_setup.sql
+-- Create a graph from the style tagger output in the database, using setup/graph_creation.sql
+-- \i setup/graph_creation.sql
 
 -- Three node types, three edge types:
 -- (:Product)-[:HAS_STYLE]->(:Style)           ← from ai.extract output
@@ -49,7 +47,7 @@ SELECT extracted->'style' AS style, COUNT(*) FROM style_tagger_output GROUP BY s
 --- 2-HOP: The wow moment ---
 -- The AI discovered style relationships → the graph traverses them
 -- ASCII art representation of the graph
---        Product(10414)
+--        Product(2315)
 --              ↓
 --        [HAS_STYLE]
 --              ↓
@@ -72,11 +70,12 @@ SELECT * FROM ag_catalog.cypher('style_graph', $$
     MATCH (rec)-[e5:IN_CATEGORY]->(recCat:Category)
     WHERE seedCat.name <> recCat.name
     RETURN seed, e1, s, e2, related, e3, rec, e4, seedCat, e5, recCat
-    LIMIT 5
+    LIMIT 10
 $$) AS (seed agtype, e1 agtype, style agtype, e2 agtype, related agtype, e3 agtype, rec agtype, e4 agtype, seedCat agtype, e5 agtype, recCat agtype);
 
 
 ----- Bonus: Cooler Graphs (if time) ------
+
 -- 1-HOP: Same style, cross-category
 -- ASCII art representation of the graph
 --        Product(2315)

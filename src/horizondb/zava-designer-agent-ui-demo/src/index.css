@@ -1345,6 +1345,18 @@ body {
   font-size: 14px;
   flex-shrink: 0;
 }
+.design-step-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(196,92,58,.28);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: designStepSpin .8s linear infinite;
+}
+@keyframes designStepSpin {
+  to { transform: rotate(360deg); }
+}
 .design-step.done .design-step-icon {
   color: var(--success);
   font-weight: 700;

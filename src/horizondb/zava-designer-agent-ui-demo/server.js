@@ -1,7 +1,10 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import pg from 'pg';
+
+// Ensure local .env values win over any stale terminal-exported PG* vars.
+dotenv.config({ override: true });
 
 const { Pool } = pg;
 
@@ -132,69 +135,6 @@ Return ONLY valid JSON, no markdown fences.`;
 }
 
 // ---------------------------------------------------------------------------
-// Tool 2: get_semantic_context
-// Reads column comments to understand the schema, then builds search context
-// ---------------------------------------------------------------------------
-async function getSemanticContext(roomDescription, theme) {
-  // Read table + column comments to understand data structure
-  const sql = `
-    SELECT
-      a.attname AS column_name,
-      pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
-      col_description(a.attrelid, a.attnum) AS comment
-    FROM pg_attribute a
-    JOIN pg_class c ON a.attrelid = c.oid
-    JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE c.relname = 'product_metadata_demo'
-      AND n.nspname = 'public'
-      AND a.attnum > 0
-      AND NOT a.attisdropped
-    ORDER BY a.attnum
-  `;
-  const { rows, duration } = await query(sql);
-
-  // Also try the semantic dictionary for style term expansion
-  let dictRows = [];
-  let dictDuration = 0;
-  try {
-    const dictResult = await query(
-      `SELECT term, canonical, context, notes
-       FROM semantic_dictionary
-       WHERE term ILIKE $1 OR canonical ILIKE $1
-       ORDER BY term LIMIT 10`,
-      [`%${theme}%`]
-    );
-    dictRows = dictResult.rows;
-    dictDuration = dictResult.duration;
-  } catch {
-    // semantic_dictionary may not exist — that's fine
-  }
-
-  const expandedTerms = dictRows.map(r => r.canonical || r.term);
-  const columns = rows.map(r => ({
-    name: r.column_name,
-    type: r.data_type,
-    comment: r.comment,
-  }));
-
-  return {
-    tool: 'get_semantic_context',
-    duration: duration + dictDuration,
-    sql: `SELECT a.attname, col_description(a.attrelid, a.attnum)\nFROM pg_attribute a JOIN pg_class c ON a.attrelid = c.oid\nWHERE c.relname = 'product_metadata_demo';`,
-    input: { room_description: roomDescription, theme },
-    output: {
-      table: 'product_metadata_demo',
-      columns_inspected: columns.length,
-      key_columns: columns.filter(c => c.comment).map(c => `${c.name}: ${c.comment}`).slice(0, 6),
-      expanded_terms: expandedTerms.length > 0
-        ? expandedTerms
-        : ['danish modern', 'retro furniture', 'tapered legs', 'warm wood'],
-      filter_hint: 'average_rating >= 4.0',
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Tool 3: hybrid_search_products
 // Uses ai.search() per category — mirrors real_queries.sql pattern
 // ---------------------------------------------------------------------------
@@ -244,10 +184,13 @@ async function hybridSearchProducts(searchQuery, priorities, brands, demoMode = 
              p.store, p.categories, p.images, s.score
       FROM ai.search(
         $1,
-        source_table => 'product_metadata_demo',
-        filter => $2
+        source_table => 'product_sample',
+        content_column => 'content',
+        embedding_column => 'embedding',
+        filter => $2,
+        embedding_model => 'default-embedding'
       ) s
-      JOIN product_metadata_demo p ON p.id = s.id
+      JOIN product_sample p ON p.id = s.id
       LIMIT 5
     `;
 
@@ -299,7 +242,7 @@ async function findRelatedProducts(productIds, limit = 3) {
       SELECT id, title, parent_asin,
              details->>'bought_together' AS bought_together,
              categories
-      FROM product_metadata_demo
+      FROM product_sample
       WHERE id = $1
     `;
     const { rows: sourceRows } = await query(sqlSource, [pid]);
@@ -318,7 +261,7 @@ async function findRelatedProducts(productIds, limit = 3) {
           const sqlRelated = `
             SELECT id, title, price, average_rating, rating_number,
                    store, categories, images
-            FROM product_metadata_demo
+            FROM product_sample
             WHERE parent_asin = ANY($1)
             LIMIT $2
           `;
@@ -339,7 +282,7 @@ async function findRelatedProducts(productIds, limit = 3) {
         const sqlCat = `
           SELECT id, title, price, average_rating, rating_number,
                  store, categories, images
-          FROM product_metadata_demo
+          FROM product_sample
           WHERE categories @> to_jsonb($1::text)
             AND id != $2
           ORDER BY average_rating DESC NULLS LAST
@@ -469,7 +412,7 @@ async function filterProducts(products, budget, numCategories) {
   const sql = `
     SELECT id, title, price, average_rating, rating_number,
            store, categories, images
-    FROM product_metadata_demo
+    FROM product_sample
     WHERE id = ANY($1)
       AND price_num IS NOT NULL
       AND price_num <= $2
@@ -502,7 +445,7 @@ async function ensureBoostedProducts(candidates) {
   const sql = `
     SELECT id, title, price, average_rating, rating_number,
            store, categories, images
-    FROM product_metadata_demo
+    FROM product_sample
     WHERE id = ANY($1)
   `;
   try {
@@ -688,11 +631,8 @@ app.post('/api/design-room', async (req, res) => {
 
     const trace = [];
 
-    // --- Tools 1 & 2: Analyze room photo + Get semantic context (parallel) ---
-    const [roomAnalysis, semanticContextEarly] = await Promise.all([
-      analyzeRoomPhoto(roomImageUrl, theme),
-      getSemanticContext(`${theme} furniture for Brooklyn loft living room`, theme),
-    ]);
+    // --- Tool 1: Analyze room photo ---
+    const roomAnalysis = await analyzeRoomPhoto(roomImageUrl, theme);
     trace.push(roomAnalysis);
 
     const roomStyle = roomAnalysis.output.style || theme;
@@ -700,13 +640,11 @@ app.post('/api/design-room', async (req, res) => {
     const roomGaps = roomAnalysis.output.gaps || [];
 
     const roomDescription = `${roomStyle} furniture for Brooklyn loft living room with ${roomColors.join(', ')} tones. Looking for ${roomGaps.join(', ')} that complement the existing space.`;
-    trace.push(semanticContextEarly);
 
-    // Build the search query from room analysis + semantic context
-    const expandedTerms = semanticContextEarly.output.expanded_terms || [];
+    // Build the search query from room analysis
     const searchQuery = demoMode
       ? DEMO_QUERY
-      : `${roomStyle} ${expandedTerms.join(' ')} furniture for Brooklyn loft living room with ${roomColors.join(' and ')} tones, featuring cozy seating, stylish tables, ambient lighting, and decorative accents`;
+      : `${roomStyle} furniture for Brooklyn loft living room with ${roomColors.join(' and ')} tones, featuring cozy seating, stylish tables, ambient lighting, and decorative accents`;
 
     // --- Tool 3: Hybrid search ---
     const hybridResults = await hybridSearchProducts(searchQuery, priorities, brands, demoMode);
