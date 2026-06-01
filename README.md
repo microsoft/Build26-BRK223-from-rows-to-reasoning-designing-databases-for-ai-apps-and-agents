@@ -1,36 +1,3 @@
-# 🚀 Get Started
-
-**This repo is where attendees go to continue their learning after your session — and your Copilot agent will help you set it up.**
-
-### Step 1: Open your repo
-
-Open this repo in a **Codespace** (click the green **Code** button → **Create a Codespace**) — or clone it locally. Then open **GitHub Copilot Chat**.
-
-### Step 2: Add your content
-
-Give the agent something to work with. Drag files into the Explorer panel — session abstracts, outlines, screenshots, notes — and drop them in one of two places:
-
-| Where to put it | What goes there | Who sees it |
-|---|---|---|
-| **`_remove-before-publish/`** | Internal reference materials (abstracts, outlines, screenshots, planning docs) | **Copilot only** — never published |
-| **`/docs/`, `/src/`, or repo root** | Lab instructions, demo code, sample data, getting-started guides | **Attendees** — published with the repo |
-
-> 💡 Not sure? Start by dropping your session abstract or outline into `_remove-before-publish/`. The agent will figure out what to do with it.
-
-### Step 3: Ask the Agent
-
-Once your content is in the repo, use these three phrases with Copilot to build out your session repo:
-
-| Phrase to use with Copilot | What it does | When to run it |
-|---|---|---|
-| **"Help me get started"** | Sets up session title, description, outcomes, and owners | After you've added your session abstract or outline to the repo |
-| **"Help me refine content"** | Organizes your session content into the repo | Each time you add or update content |
-| **"Help me finalize"** | Final review, cleanup, and publication prep | When you're ready to publish |
-
-> 💡 **These three phrases are just the starting point.** Copilot can do much more — try asking it to brainstorm next steps for attendees, generate code samples, or build out your repo structure. Don't be afraid to put it in plan mode and ask for what you need.
-
----
-
 <a name="start-building"></a>
 <br>
 <p align="center">
