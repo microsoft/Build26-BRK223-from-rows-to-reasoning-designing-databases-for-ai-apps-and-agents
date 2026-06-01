@@ -22,6 +22,8 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState("Ready");
+  const [accountsCollapsed, setAccountsCollapsed] = useState(false);
+  const [memoryCollapsed, setMemoryCollapsed] = useState(false);
 
   const activeUser = users.find((user) => user.id === activeUserId);
   const activeTicket = tickets.find((ticket) => ticket.id === activeTicketId);
@@ -46,7 +48,7 @@ export function App() {
     if (!activeUserId) {
       return;
     }
-    setStatus("Loading customer memory...");
+    setStatus("Loading account memory...");
     Promise.all([api.tickets(activeUserId), api.profile(activeUserId)])
       .then(([ticketResponse, profileResponse]) => {
         const nextTickets = ticketResponse.tickets || [];
@@ -117,72 +119,64 @@ export function App() {
     if (!activeUserId) {
       return;
     }
-    setStatus("Creating ticket...");
+    setStatus("Creating engagement...");
     try {
       const created = await api.createTicket(activeUserId, ticket);
       setTickets((current) => [created, ...current]);
       setActiveTicketId(created.id);
       setMessages([]);
       setLatestRecall([]);
-      setStatus("Ticket created");
+      setStatus("Engagement created");
     } catch (error) {
       setStatus(error.message);
-    }
-  }
-
-  async function seedDemo() {
-    setProcessing(true);
-    setStatus("Seeding raw demo turns...");
-    try {
-      const result = await api.seed(false);
-      if (activeUserId) {
-        const [ticketResponse, profileResponse] = await Promise.all([api.tickets(activeUserId), api.profile(activeUserId)]);
-        setTickets(ticketResponse.tickets || []);
-        setActiveTicketId(ticketResponse.tickets?.[0]?.id || "");
-        setProfile(profileResponse);
-      }
-      setStatus(result.status === "already_seeded" ? "Demo data already seeded" : "Raw demo turns seeded");
-    } catch (error) {
-      setStatus(error.message);
-    } finally {
-      setProcessing(false);
-    }
-  }
-
-  async function resetDemo() {
-    setProcessing(true);
-    setStatus("Resetting demo memory...");
-    try {
-      const result = await api.reset();
-      setMessages([]);
-      setLatestRecall([]);
-      await refreshProfile();
-      setStatus(`Reset ${result.deleted} demo records`);
-    } catch (error) {
-      setStatus(error.message);
-    } finally {
-      setProcessing(false);
     }
   }
 
   return (
     <div className="appShell">
       <header className="topBar">
-        <div>
-          <div className="sectionLabel">Agent Memory Toolkit Sample</div>
-          <h1>Support Engineer Agent</h1>
+        <div className="brand">
+          <span className="brandMark" aria-hidden="true">
+            <svg viewBox="0 0 18 18" role="img" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="cosmosSphere" x1="9" y1="1.8" x2="9" y2="16.2" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#5ea0ef" />
+                  <stop offset="1" stopColor="#0f4faa" />
+                </linearGradient>
+              </defs>
+              <circle cx="9" cy="9" r="6.6" fill="url(#cosmosSphere)" />
+              <g stroke="#ffffff" strokeWidth="0.5" fill="none" opacity="0.92">
+                <ellipse cx="9" cy="9" rx="6.6" ry="2.55" />
+                <ellipse cx="9" cy="9" rx="2.55" ry="6.6" />
+                <line x1="2.4" y1="9" x2="15.6" y2="9" />
+                <line x1="9" y1="2.4" x2="9" y2="15.6" />
+              </g>
+              <g transform="rotate(-35 9 9)">
+                <ellipse cx="9" cy="9" rx="8.05" ry="3.25" stroke="#83bdff" strokeWidth="0.7" fill="none" />
+                <circle cx="9" cy="5.75" r="1.05" fill="#ffffff" />
+              </g>
+            </svg>
+          </span>
+          <div className="brandText">
+            <div className="sectionLabel">Azure Cosmos DB Agent Memory</div>
+            <h1>Customer Success Agent</h1>
+          </div>
         </div>
         <div className="topActions">
           <span className="status"><RefreshCw size={14} className={processing ? "spin" : ""} />{status}</span>
-          {config && <span className={`configPill ${config.configured ? "ready" : "missing"}`}>{config.configured ? "Config ready" : "Config missing"}</span>}
-          <button className="seedButton" type="button" onClick={seedDemo} disabled={processing}>Seed Demo Data</button>
-          <button className="seedButton secondary" type="button" onClick={resetDemo} disabled={processing}>Reset Memory</button>
+          {config && <span className={`configPill ${config.configured ? "ready" : "missing"}`}>{config.configured ? "Connected" : "Config missing"}</span>}
           <ThemeToggle theme={theme} onToggle={() => setTheme(theme === "dark" ? "light" : "dark")} />
         </div>
       </header>
 
-      <div className="workspace">
-        <UserSwitcher users={users} activeUserId={activeUserId} onSelect={setActiveUserId} />
+      <div className={`workspace${accountsCollapsed ? " accountsCollapsed" : ""}${memoryCollapsed ? " memoryCollapsed" : ""}`}>
+        <UserSwitcher
+          users={users}
+          activeUserId={activeUserId}
+          onSelect={setActiveUserId}
+          collapsed={accountsCollapsed}
+          onToggleCollapse={() => setAccountsCollapsed((value) => !value)}
+        />
         <div className="centerStack">
           <ChatPanel user={activeUser} ticket={activeTicket} messages={messages} onSend={sendMessage} loading={loading} />
           <TicketTimeline tickets={tickets} activeTicketId={activeTicketId} onSelect={setActiveTicketId} onCreate={createTicket} />
@@ -194,6 +188,8 @@ export function App() {
           processing={processing}
           user={activeUser}
           tickets={tickets}
+          collapsed={memoryCollapsed}
+          onToggleCollapse={() => setMemoryCollapsed((value) => !value)}
         />
       </div>
     </div>
