@@ -10,9 +10,9 @@
 
       1. docker start azsql-zavalivesite (if not already running)
       2. Wait for SQL to accept connections on localhost,14330
-      3. Warmup-Ai.ps1            (re-warm phi4 + mxbai-embed-large)
-      4. Reset-ForBeat2.ps1       (rewind incident 5012 + drop Beat-2c index)
-      5. Verify-Build.ps1         (health checks)
+      3. Verify-Build.ps1         (health checks; starts Ollama+Caddy if down)
+      4. Warmup-Ai.ps1            (re-warm phi4 + mxbai-embed-large)
+      5. Reset-ForBeat2.ps1       (rewind incident 5012 + drop Beat-2c index)
       6. Start-LiveSite.ps1       (AppHost + DAB + Web)
 
     Does NOT run Build.ps1 or deploy-prestage.ps1 — nothing is dropped or
@@ -120,21 +120,23 @@ if ($status) {
 Write-Step "2/6 Wait for SQL on localhost,$SqlPort"
 & (Join-Path $PSScriptRoot 'Test-AzureSqlConnection.ps1') -Port $SqlPort -SaPassword $env:BRK223_SA_PASSWORD -ContainerName $ContainerName
 
-# 3. Warmup AI models.
-Write-Step "3/6 Warmup Ollama models"
+# 3. Verify build. Runs BEFORE Warmup so Restart-AiServices can bring
+#    Ollama + Caddy up if they aren't running yet (otherwise Warmup hits
+#    a closed port and silently no-ops).
+Write-Step "3/6 Verify-Build"
+& (Join-Path $PSScriptRoot 'Verify-Build.ps1')
+
+# 4. Warmup AI models (Ollama + Caddy guaranteed running after step 3).
+Write-Step "4/6 Warmup Ollama models"
 & (Join-Path $PSScriptRoot 'Warmup-Ai.ps1') -ContainerName $ContainerName
 
-# 4. Optional: rewind incident state.
+# 5. Optional: rewind incident state.
 if (-not $SkipReset) {
-    Write-Step "4/6 Reset-ForBeat2 (rewind incident state)"
+    Write-Step "5/6 Reset-ForBeat2 (rewind incident state)"
     & (Join-Path $PSScriptRoot 'Reset-ForBeat2.ps1') -Server "localhost,$SqlPort" -Password $env:BRK223_SQLADMIN_PASSWORD
 } else {
-    Write-Step "4/6 Reset-ForBeat2 (skipped)"
+    Write-Step "5/6 Reset-ForBeat2 (skipped)"
 }
-
-# 5. Verify.
-Write-Step "5/6 Verify-Build"
-& (Join-Path $PSScriptRoot 'Verify-Build.ps1')
 
 # 6. Start the live site.
 if (-not $SkipStart) {
