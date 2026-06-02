@@ -3,20 +3,19 @@
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 -- ---------------------------------------------------------------------------
--- ACT 0 — Enable AI Model Management
--- Expected output: default-chat (gpt-5), default-embedding (text-embedding-3-small)
--- ---------------------------------------------------------------------------
-
-SELECT * FROM model_registry.model_list_all();
-SELECT azure_openai.create_embeddings(input => 'hello world');
-
--- ---------------------------------------------------------------------------
 -- ACT 0 — View the Dataset
 -- Using a subset of the data for demonstration purposes.
 -- Also show the data types and constraints in the schema viewer
 -- ---------------------------------------------------------------------------
 
 SELECT title, content, categories, price, average_rating, rating_number, images FROM product_sample LIMIT 5;
+
+-- ---------------------------------------------------------------------------
+-- ACT 0 — Enable AI Model Management
+-- Expected output: default-chat (gpt-5), default-embedding (text-embedding-3-small)
+-- ---------------------------------------------------------------------------
+
+SELECT * FROM model_registry.model_list_all();
 
 -- ---------------------------------------------------------------------------
 -- ACT 1 — RAG Pipeline in Seconds
@@ -46,7 +45,6 @@ SELECT ai.run('product_rag_pipeline_build_2026');
 -- ---------------------------------------------------------------------------
 
 SELECT * FROM ai.status('product_rag_pipeline_build_2026');
-SELECT * FROM ai.list_pipelines();
 
 -- ---------------------------------------------------------------------------
 -- ACT 1C — Look at output table

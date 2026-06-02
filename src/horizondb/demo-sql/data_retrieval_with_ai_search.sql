@@ -16,22 +16,6 @@ CREATE INDEX IF NOT EXISTS idx_product_rag_diskann ON public.product_rag_pipelin
 USING diskann (embedding vector_cosine_ops);
 
 -- =============================================================================
--- Room Analysis: azure_ai.generate() with image URL
--- Describes the room photo to identify style, furniture, colors, and gaps
--- =============================================================================
--- 1. 
--- SELECT azure_ai.generate(
---   'Recommended the style for this. https://i.ibb.co/p61fm20N/Designer.png
---   ['Mid-Century Modern', 'Industrial', 'Scandinavian','Bohemian', 'Farmhouse', 'Minimalist']'
--- );
-
--- 2. 
--- SELECT azure_ai.generate(
---   'Analyze this living room photo. https://i.ibb.co/p61fm20N/Designer.png
---   give a semantic description of the room'
--- );
-
--- =============================================================================
 -- Product Search: ai.search() with semantic ranking and category filters
 -- Searches for furniture and decor matching the room design query
 -- ai.search is currently a custom stored proc at //Build, it will be released in HorizonDB the Summer 2026
@@ -45,7 +29,28 @@ FROM ai.search(
     source_table => 'product_rag_pipeline_build_2026_output',
     content_column => 'chunk_text',
     search_type => 'hybrid',
-    top_k => 50) search 
+    top_k => 10) search 
 JOIN product_rag_pipeline_build_2026_output product_output ON product_output.id = search.id
 JOIN product_sample product ON product.id = product_output.doc_id
 ORDER BY search.score DESC;
+
+-- More advanced search with reranking
+SELECT product.id, product.title, product_output.chunk_text, product.price, product.category, search.score
+FROM ai.search(
+    query => 'mid-century modern furniture for Brooklyn loft living room with wood tones and dark vibe',
+    source_table => 'product_rag_pipeline_build_2026_output',
+    content_column => 'chunk_text',
+    search_type => 'hybrid',
+    rerank => true, -- Added reranking
+    top_k => 10) search 
+JOIN product_rag_pipeline_build_2026_output product_output ON product_output.id = search.id
+JOIN product_sample product ON product.id = product_output.doc_id
+ORDER BY search.score DESC;
+
+-- What changes in the results:
+--    - Baseline ranks the DHP white mid-century chair at #1 (strong keyword
+--      + vector match on "mid-century modern").
+--    - Rerank reads the full intent — "wood tones AND dark vibe" — and the
+--      white chair conflicts with "dark vibe", so it drops out of the top 10.
+--    - Walnut / dark wood pieces rise: WLIVE grey lift-top coffee table,
+--      Household Essentials walnut cubby, VASAGLE rustic brown bookcase.
