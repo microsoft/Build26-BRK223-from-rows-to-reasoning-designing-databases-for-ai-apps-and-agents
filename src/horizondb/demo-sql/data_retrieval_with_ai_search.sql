@@ -1,3 +1,6 @@
+-- Zava Room Designer Agent 
+-- A tool that helps users design their living spaces by suggesting products from an 
+-- ecommerce catalog based on a photo of their room.
 
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 -- DATA RETRIEVAL: Real Queries for Roommate UI Demo

@@ -2,9 +2,9 @@
 
 ## Overview
 
-20-minute demo using the **Zava Designer Agent** scenario. 100K Amazon Home & Kitchen products in `product_metadata_demo` on **May12-Horizon** (HorizonDB UK South). The demo showcases AI Pipelines, hybrid search, AI-powered style extraction, and a graph query — all inside Postgres.
+20-minute demo using the **Zava Room Designer Agent** scenario. 100K Zava Home & Kitchen products in `product_metadata_demo` on HorizonDB. The demo showcases AI Pipelines, hybrid search, AI-powered style extraction, and a graph query — all inside Postgres.
 
-**Core message:** *"One database. Every layer of the AI stack."* — No Pinecone, no Neo4j, no separate reranker service. Vector search, full-text search, graph, multimodal embeddings, reranking, and durable pipelines all run inside one Postgres database.
+**Core message:** *"One Postgres database. Every layer of the AI stack."* — No Pinecone, no Neo4j, no separate reranker service. Vector search, full-text search, graph, multimodal embeddings, reranking, and durable pipelines all run inside one Postgres database.
 
 **The Core Promise:** "I'm going to build Zava Designer Agent — an app that looks at a photo of your living room and tells you exactly which pieces from a 100K+ Zava catalog would make it perfect — and I'm going to build the entire thing, database to frontend, in 20 minutes using nothing but HorizonDB."
 
