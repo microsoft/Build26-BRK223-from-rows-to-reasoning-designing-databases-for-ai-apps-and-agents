@@ -136,7 +136,8 @@ Return ONLY valid JSON, no markdown fences.`;
 
 // ---------------------------------------------------------------------------
 // Tool 3: hybrid_search_products
-// Uses ai.search() per category — mirrors real_queries.sql pattern
+// Uses ai.search() — BM25 + vector + RRF. Filters are applied in the outer
+// SQL because this build of ai.search doesn't accept a filter parameter.
 // ---------------------------------------------------------------------------
 async function hybridSearchProducts(searchQuery, priorities, brands, demoMode = false) {
   const allResults = [];
@@ -167,35 +168,42 @@ async function hybridSearchProducts(searchQuery, priorities, brands, demoMode = 
     const prefix = demoMode ? '' : (CATEGORY_QUERY_PREFIX[priority] || '');
     const categoryQuery = demoMode ? searchQuery : `${prefix} ${searchQuery}`;
 
-    // Build the filter string safely — ai.search takes it as a text param
-    // Include rating >= 4.0 and price > $25 to filter out novelty/gift items
-    let filterStr;
+    // ai.search in this build doesn't accept a `filter` param — apply
+    // category / rating / price filters in the outer SQL instead, and use
+    // fetch_k to widen the candidate pool so enough rows survive filtering.
+    let categoryClause;
+    let categoryParams;
     if (Array.isArray(dbCategory)) {
-      const orClauses = dbCategory.map(c => `categories @> '["${c}"]'`).join(' OR ');
-      filterStr = `(${orClauses}) AND average_rating >= 4.0 AND price_num > 25`;
+      // categories @> ANY of the provided category arrays
+      const orClauses = dbCategory.map((_, i) => `p.categories @> $${i + 2}::jsonb`).join(' OR ');
+      categoryClause = `(${orClauses})`;
+      categoryParams = dbCategory.map(c => JSON.stringify([c]));
     } else {
-      filterStr = `categories @> '["${dbCategory}"]' AND average_rating >= 4.0 AND price_num > 25`;
+      categoryClause = `p.categories @> $2::jsonb`;
+      categoryParams = [JSON.stringify([dbCategory])];
     }
-
-
 
     const sql = `
       SELECT p.id, p.title, p.price, p.average_rating, p.rating_number,
              p.store, p.categories, p.images, s.score
       FROM ai.search(
-        $1,
+        query => $1,
         source_table => 'product_sample',
         content_column => 'content',
-        embedding_column => 'embedding',
-        filter => $2,
-        embedding_model => 'default-embedding'
+        search_type => 'hybrid',
+        top_k => 50,
+        fetch_k => 200
       ) s
       JOIN product_sample p ON p.id = s.id
+      WHERE ${categoryClause}
+        AND p.average_rating >= 4.0
+        AND p.price_num > 25
+      ORDER BY s.score DESC
       LIMIT 5
     `;
 
     try {
-      const { rows, duration } = await query(sql, [categoryQuery, filterStr]);
+      const { rows, duration } = await query(sql, [categoryQuery, ...categoryParams]);
       return { priority, rows, duration };
     } catch (err) {
       console.error(`hybrid_search for ${dbCategory} failed:`, err.message);
@@ -217,7 +225,7 @@ async function hybridSearchProducts(searchQuery, priorities, brands, demoMode = 
   return {
     tool: 'hybrid_search_products',
     duration: wallClockDuration,
-    sql: `SELECT p.title, p.price, s.score\nFROM ai.search($1, source_table => 'product_metadata_demo',\n  filter => $2) s\nJOIN product_metadata_demo p ON p.id = s.id\nLIMIT 5;`,
+    sql: `SELECT p.title, p.price, s.score\nFROM ai.search(query => $1, source_table => 'product_sample',\n  content_column => 'content', search_type => 'hybrid',\n  top_k => 50, fetch_k => 200) s\nJOIN product_sample p ON p.id = s.id\nWHERE p.categories @> $2::jsonb AND p.average_rating >= 4.0\nORDER BY s.score DESC LIMIT 5;`,
     input: { query: searchQuery, categories: categoriesToSearch, rerank: true },
     output: {
       total_results: allResults.length,
@@ -424,7 +432,7 @@ async function filterProducts(products, budget, numCategories) {
   return {
     tool: 'filter_products',
     duration,
-    sql: `SELECT id, title, price, average_rating\nFROM product_metadata_demo\nWHERE id = ANY($1) AND price_num <= $2\n  AND average_rating >= 4.0\nORDER BY average_rating DESC;`,
+    sql: `SELECT id, title, price, average_rating\nFROM product_sample\nWHERE id = ANY($1) AND price_num <= $2\n  AND average_rating >= 4.0\nORDER BY average_rating DESC;`,
     input: { budget, max_per_item: Math.round(maxPerItem), min_rating: 4.0, candidates: ids.length },
     output: { matched: rows.length, filtered_out: ids.length - rows.length },
     _products: rows,
