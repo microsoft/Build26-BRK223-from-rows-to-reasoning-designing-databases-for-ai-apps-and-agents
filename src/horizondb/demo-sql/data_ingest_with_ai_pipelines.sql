@@ -1,3 +1,7 @@
+-- Zava Room Designer Agent 
+-- A tool that helps users design their living spaces by suggesting products from an 
+-- ecommerce catalog based on a photo of their room.
+
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 -- DATA INGESTION: Real-time Ingestion of Product Data with AI Pipelines
 -- ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -8,7 +12,8 @@
 -- Also show the data types and constraints in the schema viewer
 -- ---------------------------------------------------------------------------
 
-SELECT title, content, categories, price, average_rating, rating_number, images FROM product_sample LIMIT 5;
+SELECT title, content, categories, price, average_rating, rating_number, images 
+FROM product_sample LIMIT 5;
 
 -- ---------------------------------------------------------------------------
 -- ACT 0 — Enable AI Model Management
